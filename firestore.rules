@@ -1,0 +1,85 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // --- Helper Functions ---
+
+    // Check if user is signed in
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    // Fetch user data from the 'users' collection using their email (doc ID)
+    function getUserData() {
+      return get(/databases/$(database)/documents/users/$(request.auth.token.email)).data;
+    }
+    
+    // Check if the user has the 'admin' role
+    function isAdmin() {
+      return isAuthenticated() && getUserData().role == 'admin';
+    }
+
+    // Check if the user is the Super Admin (Hardcoded protection)
+    function isSuperAdmin() {
+      return isAuthenticated() && request.auth.token.email == 'gonzalodiazs@gmail.com';
+    }
+
+    // --- Collection Rules ---
+
+    // Users Collection
+    // Doc ID is the user's email
+    match /users/{email} {
+      // Authenticated users can read valid profiles (needed for UI)
+      allow read: if isAuthenticated();
+      
+      // Creation: Only allow if the auth email matches the doc ID (Self-registration)
+      // And strict validation of initial data could be added here, but broadly:
+      allow create: if isAuthenticated() && request.auth.token.email == email;
+      
+      // Updates: 
+      // 1. User can update their own non-sensitive fields (handled by logic, but rules allow write to own doc)
+      // 2. Admins can update any user (approvals, role changes)
+      allow update: if isAuthenticated() && (request.auth.token.email == email || isAdmin());
+      
+      // Deletion: Only Super Admin can delete users
+      allow delete: if isSuperAdmin();
+    }
+    
+    // Cases Collection (Clinical Cases)
+    match /cases/{caseId} {
+      // Students can read
+      allow read: if isAuthenticated();
+      // Only Admins can create/update/delete
+      allow write: if isAdmin();
+    }
+    
+    // Anatomy Modules
+    match /anatomy_modules/{moduleId} {
+      // Students can read
+      allow read: if isAuthenticated();
+      // Only Admins can create/update/delete
+      allow write: if isAdmin();
+    }
+    
+    // Activity Logs (Audit Trail)
+    match /activity_logs/{logId} {
+      // Users can only create logs where the 'email' field matches their own
+      allow create: if isAuthenticated() && request.resource.data.email == request.auth.token.email;
+      
+      // Only Admins can view logs
+      allow read: if isAdmin();
+      
+      // No one can modify or delete logs (Immutable)
+      allow update, delete: if false;
+    }
+
+    // Diagnostics (For Permission Testing)
+    match /diagnostics/{docId} {
+      // Admins can see results
+      allow read: if isAdmin();
+      // Any user allows to run the test (create/delete their own test doc)
+      allow create: if isAuthenticated();
+      allow delete: if isAuthenticated();
+    }
+  }
+}

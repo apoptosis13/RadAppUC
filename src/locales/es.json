@@ -1,0 +1,260 @@
+{
+  "navigation": {
+    "home": "Inicio",
+    "anatomy": "Anatomía",
+    "cases": "Casos",
+    "instructor": "Portal del Instructor",
+    "profile": "Mi Perfil"
+  },
+  "home": {
+    "title": "Portal Radiología Musculoesquelética",
+    "subtitle": "Pontificia Universidad Católica de Chile",
+    "description": "Estudio interactivo de radiología musculoesquelética para residentes.",
+    "startPracticing": "Empezar a Practicar",
+    "exploreAnatomy": "Explorar Anatomía",
+    "features": {
+      "anatomy": {
+        "title": "Módulos de Anatomía",
+        "description": "Guías de estudio en anatomía radiológica multimodalidad",
+        "link": "Aprender más"
+      },
+      "cases": {
+        "title": "Biblioteca de Casos",
+        "description": "Casos de estudio y desafío diagnóstico de dificultad variable.",
+        "link": "Explorar Casos"
+      },
+      "instructor": {
+        "title": "Portal del Instructor",
+        "description": "Herramientas para que los instructores creen, gestionen y distribuyan casos de entrenamiento.",
+        "link": "Acceder al Portal"
+      }
+    },
+    "footer": {
+      "rights": "Todos los derechos reservados."
+    }
+  },
+  "anatomy": {
+    "pageTitle": "Anatomía Radiológica",
+    "back": "Volver a Anatomía",
+    "subtitle": "Seleccione una región o modalidad para comenzar a estudiar estructuras anatómicas.",
+    "startModule": "Iniciar Módulo",
+    "modules": {
+      "knee-mri": {
+        "title": "RMN de Rodilla",
+        "description": "Anatomía detallada de la articulación de la rodilla en secuencias de RMN."
+      },
+      "chest-xray": {
+        "title": "Rayos X de Tórax",
+        "description": "Vistas estándar PA y Lateral del tórax."
+      },
+      "brain-ct": {
+        "title": "TC Cerebral",
+        "description": "Secciones axiales del parénquima cerebral."
+      }
+    },
+    "landing": {
+      "title": "Módulos de Anatomía Radiológica",
+      "description": "Explora la anatomía normal a través de diferentes modalidades de imagen."
+    },
+    "regions": {
+      "upper-limb": {
+        "title": "Miembro Superior",
+        "description": "Atlas anatómico y radiológico interactivo de las extremidades superiores basado en diagramas anatómicos, imágenes médicas de TC y RM."
+      },
+      "lower-limb": {
+        "title": "Miembro Inferior",
+        "description": "Atlas anatómico y radiológico de las extremidades inferiores basado en diagramas anatómicos, imágenes médicas de TC y RM."
+      },
+      "thoracoabdominal": {
+        "title": "Pared Toracoabdominal",
+        "description": "Anatomía musculoesquelética de la pared torácica y abdominal."
+      }
+    },
+    "viewer": {
+      "loading": "Cargando visor...",
+      "structures": "Estructuras Anatómicas",
+      "showAll": "Ver todo",
+      "hideAll": "Ocultar todo",
+      "descriptionTitle": "DESCRIPCIÓN",
+      "tools": {
+        "rotate": "Rotar",
+        "flip": "Voltear",
+        "zoomIn": "Acercar",
+        "zoomOut": "Alejar",
+        "fullscreen": "Pantalla Completa"
+      }
+    },
+    "categories": {
+      "general": "Anatomía General",
+      "bones": "Huesos",
+      "ligaments": "Ligamentos",
+      "muscles": "Músculos",
+      "tendons": "Tendones",
+      "bursae": "Bolsas Sinoviales",
+      "arteries": "Arterias",
+      "veins": "Venas",
+      "nerves": "Nervios",
+      "joints": "Articulación",
+      "joint_cavity": "Cavidad Articular",
+      "fat_pad": "Cuerpo Adiposo",
+      "menisci": "Meniscos"
+    },
+    "editor": {
+      "structures": "Estructuras",
+      "label": "Etiqueta",
+      "category": "Categoría",
+      "description": "Descripción",
+      "placeholder": "Detalles de la estructura...",
+      "close": "Cerrar"
+    }
+  },
+  "cases": {
+    "pageTitle": "Biblioteca de Casos",
+    "all": "Todos",
+    "showing": "Mostrando {{count}} casos",
+    "solve": "Resolver Caso",
+    "notFound": "Caso no encontrado",
+    "back": "Volver a Casos",
+    "history": "Historia Clínica",
+    "loading": "Cargando...",
+    "difficulty": {
+      "Beginner": "Principiante",
+      "Intermediate": "Intermedio",
+      "Advanced": "Avanzado"
+    },
+    "modality": {
+      "X-Ray": "Radiografía",
+      "CT": "TC",
+      "MRI": "Resonancia Magnética",
+      "Ultrasound": "Ecografía"
+    },
+    "objectives": {
+      "title": "Objetivos de Aprendizaje",
+      "item1": "Identificar hallazgos patológicos clave",
+      "item2": "Formular un diagnóstico diferencial",
+      "item3": "Correlacionar imágenes con la historia clínica"
+    },
+    "data": {
+      "case1": {
+        "title": "Dolor Agudo de Rodilla",
+        "history": "Varón de 25 años, jugador de fútbol, con lesión por torsión.",
+        "correctDiagnosis": "Desgarro del LCA",
+        "findings": "Disrupción completa de las fibras del ligamento cruzado anterior con edema circundante."
+      },
+      "case2": {
+        "title": "Tos Persistente",
+        "history": "Mujer de 45 años con 3 semanas de tos productiva y fiebre.",
+        "correctDiagnosis": "Neumonía del Lóbulo Inferior Derecho",
+        "findings": "Opacificación en el campo pulmonar inferior derecho consistente con consolidación."
+      },
+      "case3": {
+        "title": "Cefalea Severa",
+        "history": "Varón de 60 años con cefalea súbita en 'trueno'.",
+        "correctDiagnosis": "Hemorragia Subaracnoidea",
+        "findings": "Material hiperdenso dentro de los espacios subaracnoideos, particularmente en las cisternas basales."
+      }
+    },
+    "diagnosis": {
+      "title": "Enviar Diagnóstico",
+      "keyFindings": "Hallazgos Clave",
+      "findingsPlaceholder": "Describa lo que ve...",
+      "primaryDiagnosis": "Diagnóstico Principal",
+      "diagnosisPlaceholder": "Ingrese su diagnóstico",
+      "submit": "Enviar Diagnóstico",
+      "correct": "¡Diagnóstico Correcto!",
+      "incorrect": "Incorrecto",
+      "correctIs": "El diagnóstico correcto es:",
+      "tryAgain": "Intentar Otro Caso"
+    },
+    "questions": {
+      "title": "Preguntas de Repaso",
+      "verify": "Verificar Respuesta",
+      "correct": "¡Correcto! Muy bien.",
+      "incorrect": "Incorrecto. Revisa la alternativa correcta marcada arriba."
+    }
+  },
+  "auth": {
+    "loginTitle": "Iniciar Sesión",
+    "username": "Usuario",
+    "password": "Contraseña",
+    "loginButton": "Entrar",
+    "logout": "Cerrar Sesión",
+    "error": "Credenciales inválidas",
+    "welcome": "Bienvenido, {{name}}"
+  },
+  "instructor": {
+    "dashboard": "Panel de Control",
+    "createCase": "Crear Nuevo Caso",
+    "manageCases": "Gestionar Casos",
+    "form": {
+      "title": "Título del Caso",
+      "modality": "Modalidad",
+      "difficulty": "Dificultad",
+      "history": "Historia Clínica",
+      "imageUrl": "Imagen del Caso",
+      "uploadImage": "Subir un archivo",
+      "orDrag": "o arrastrar y soltar",
+      "orEnterUrl": "O ingresar URL de imagen",
+      "removeImage": "Eliminar imagen",
+      "correctDiagnosis": "Diagnóstico Correcto",
+      "submit": "Guardar Caso",
+      "success": "Caso creado exitosamente"
+    },
+    "users": {
+      "title": "Gestión de Usuarios",
+      "addUser": "Agregar Usuario",
+      "editUser": "Editar Usuario",
+      "deleteConfirm": "¿Está seguro de eliminar este usuario?",
+      "deleteCaseConfirm": "¿Está seguro de eliminar este caso?",
+      "deleteModuleConfirm": "¿Está seguro de eliminar este módulo?",
+      "role": {
+        "student": "Estudiante",
+        "admin": "Administrador",
+        "instructor": "Instructor"
+      },
+      "tableHeaders": {
+        "name": "Nombre",
+        "username": "Usuario",
+        "role": "Rol",
+        "actions": "Acciones"
+      },
+      "form": {
+        "name": "Nombre Completo",
+        "username": "Nombre de Usuario",
+        "password": "Contraseña",
+        "role": "Rol",
+        "save": "Guardar Usuario",
+        "cancel": "Cancelar"
+      }
+    }
+  },
+  "profile": {
+    "title": "Mi Perfil",
+    "subtitle": "Gestiona tu información personal y preferencias.",
+    "name": "Nombre para mostrar",
+    "username": "Nombre de usuario (E-mail)",
+    "avatar": "Avatar",
+    "changeAvatar": "Cambiar Avatar",
+    "uploadAvatar": "Subir Imagen",
+    "presets": "Predeterminados",
+    "preferences": "Preferencias",
+    "theme": "Apariencia",
+    "language": "Idioma",
+    "light": "Claro",
+    "dark": "Oscuro",
+    "spanish": "Español",
+    "english": "Inglés",
+    "save": "Guardar Cambios",
+    "success": "Perfil actualizado correctamente"
+  },
+  "about": {
+    "title": "Acerca de la App",
+    "menuLink": "Acerca de",
+    "admin": {
+      "title": "Administración"
+    },
+    "changelog": {
+      "title": "Historial de Versiones"
+    }
+  }
+}

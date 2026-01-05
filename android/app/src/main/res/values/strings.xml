@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Radiology Training App</string>
+    <string name="title_activity_main">Radiology Training App</string>
+    <string name="package_name">com.radiology.training</string>
+    <string name="custom_url_scheme">com.radiology.training</string>
+</resources>

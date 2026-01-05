@@ -1,0 +1,56 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    
+    // --- Helper Functions ---
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    // Check if user is Admin by reading their Firestore profile
+    // Note: This matches the structure in authService (users collection keyed by email)
+    function isAdmin() {
+      return isAuthenticated() && 
+             firestore.get(/databases/(default)/documents/users/$(request.auth.token.email)).data.role == 'admin';
+    }
+
+    // --- RULES ---
+
+    // 1. Anatomy Modules (Images)
+    // Read: Any logged-in user (Students/Instructors)
+    // Write: Admins only
+    match /anatomy/{allPaths=**} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
+    }
+
+    // 2. Clinical Cases (Images)
+    // Read: Any logged-in user
+    // Write: Admins only
+    match /cases/{allPaths=**} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
+    }
+    
+    // 3. Modules (New Structure if used)
+    match /modules/{allPaths=**} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
+    }
+
+    // 4. User Avatars
+    // Path: avatars/{uid}/{filename}
+    // Read: Authenticated users (to see profile pics)
+    // Write: Only the user who owns the folder
+    match /avatars/{uid}/{allPaths=**} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated() && request.auth.uid == uid;
+    }
+
+    // 5. Default Fallback
+    // Deny any other access to prevent clutter or misuse
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

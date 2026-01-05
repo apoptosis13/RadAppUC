@@ -1,0 +1,260 @@
+{
+    "navigation": {
+        "home": "Home",
+        "anatomy": "Anatomy",
+        "cases": "Cases",
+        "instructor": "Instructor Portal",
+        "profile": "My Profile"
+    },
+    "home": {
+        "title": "Musculoskeletal Radiology Portal",
+        "subtitle": "Pontificia Universidad Católica de Chile",
+        "description": "Interactive musculoskeletal radiology study for residents.",
+        "startPracticing": "Start Practicing",
+        "exploreAnatomy": "Explore Anatomy",
+        "features": {
+            "anatomy": {
+                "title": "Anatomy Modules",
+                "description": "Study guides in multimodality radiological anatomy",
+                "link": "Learn more"
+            },
+            "cases": {
+                "title": "Case Library",
+                "description": "Case studies and diagnostic challenges of varying difficulty.",
+                "link": "Browse Cases"
+            },
+            "instructor": {
+                "title": "Instructor Portal",
+                "description": "Tools for instructors to create, manage, and distribute training cases.",
+                "link": "Access Portal"
+            }
+        },
+        "footer": {
+            "rights": "All rights reserved."
+        }
+    },
+    "anatomy": {
+        "pageTitle": "Radiology Anatomy",
+        "back": "Back to Anatomy",
+        "subtitle": "Select a region or modality to begin studying anatomical structures.",
+        "startModule": "Start Module",
+        "modules": {
+            "knee-mri": {
+                "title": "Knee MRI",
+                "description": "Detailed anatomy of the knee joint in MRI sequences."
+            },
+            "chest-xray": {
+                "title": "Chest X-Ray",
+                "description": "Standard PA and Lateral views of the chest."
+            },
+            "brain-ct": {
+                "title": "Brain CT",
+                "description": "Axial sections of the brain parenchyma."
+            }
+        },
+        "landing": {
+            "title": "Radiology Anatomy Modules",
+            "description": "Explore normal anatomy through different imaging modalities."
+        },
+        "regions": {
+            "upper-limb": {
+                "title": "Upper Limb",
+                "description": "Interactive anatomical and radiological atlas of the upper extremities based on anatomical diagrams, CT, and MRI medical images."
+            },
+            "lower-limb": {
+                "title": "Lower Limb",
+                "description": "Anatomical and radiological atlas of the lower extremities based on anatomical diagrams, CT, and MRI medical images."
+            },
+            "thoracoabdominal": {
+                "title": "Thoracoabdominal Wall",
+                "description": "Musculoskeletal anatomy of the thoracic and abdominal wall."
+            }
+        },
+        "viewer": {
+            "loading": "Loading viewer...",
+            "structures": "Anatomical Structures",
+            "showAll": "Show all",
+            "hideAll": "Hide all",
+            "descriptionTitle": "DESCRIPTION",
+            "tools": {
+                "rotate": "Rotate",
+                "flip": "Flip",
+                "zoomIn": "Zoom In",
+                "zoomOut": "Zoom Out",
+                "fullscreen": "Fullscreen"
+            }
+        },
+        "categories": {
+            "general": "General Anatomy",
+            "bones": "Bones",
+            "ligaments": "Ligaments",
+            "muscles": "Muscles",
+            "tendons": "Tendons",
+            "bursae": "Bursae",
+            "arteries": "Arteries",
+            "veins": "Veins",
+            "nerves": "Nerves",
+            "joints": "Joint",
+            "joint_cavity": "Joint Cavity",
+            "fat_pad": "Fat Pad",
+            "menisci": "Menisci"
+        },
+        "editor": {
+            "structures": "Structures",
+            "label": "Label",
+            "category": "Category",
+            "description": "Description",
+            "placeholder": "Structure details...",
+            "close": "Close"
+        }
+    },
+    "cases": {
+        "pageTitle": "Case Library",
+        "all": "All",
+        "showing": "Showing {{count}} cases",
+        "solve": "Solve Case",
+        "notFound": "Case not found",
+        "back": "Back to Cases",
+        "history": "Clinical History",
+        "loading": "Loading...",
+        "difficulty": {
+            "Beginner": "Beginner",
+            "Intermediate": "Intermediate",
+            "Advanced": "Advanced"
+        },
+        "modality": {
+            "X-Ray": "X-Ray",
+            "CT": "CT",
+            "MRI": "MRI",
+            "Ultrasound": "Ultrasound"
+        },
+        "objectives": {
+            "title": "Learning Objectives",
+            "item1": "Identify key pathological findings",
+            "item2": "Formulate a differential diagnosis",
+            "item3": "Correlate imaging with clinical history"
+        },
+        "data": {
+            "case1": {
+                "title": "Acute Knee Pain",
+                "history": "25-year-old male soccer player with twisting injury.",
+                "correctDiagnosis": "ACL Tear",
+                "findings": "Complete disruption of the anterior cruciate ligament fibers with surrounding edema."
+            },
+            "case2": {
+                "title": "Persistent Cough",
+                "history": "45-year-old female with 3 weeks of productive cough and fever.",
+                "correctDiagnosis": "Right Lower Lobe Pneumonia",
+                "findings": "Opacification in the right lower lung field consistent with consolidation."
+            },
+            "case3": {
+                "title": "Severe Headache",
+                "history": "60-year-old male with sudden onset \"thunderclap\" headache.",
+                "correctDiagnosis": "Subarachnoid Hemorrhage",
+                "findings": "Hyperdense material within the subarachnoid spaces, particularly in the basal cisterns."
+            }
+        },
+        "diagnosis": {
+            "title": "Submit Diagnosis",
+            "keyFindings": "Key Findings",
+            "findingsPlaceholder": "Describe what you see...",
+            "primaryDiagnosis": "Primary Diagnosis",
+            "diagnosisPlaceholder": "Enter your diagnosis",
+            "submit": "Submit Diagnosis",
+            "correct": "Correct Diagnosis!",
+            "incorrect": "Incorrect",
+            "correctIs": "The correct diagnosis is:",
+            "tryAgain": "Try Another Case"
+        },
+        "questions": {
+            "title": "Review Questions",
+            "verify": "Check Answer",
+            "correct": "Correct! Well done.",
+            "incorrect": "Incorrect. Check the correct alternative marked above."
+        }
+    },
+    "auth": {
+        "loginTitle": "Login",
+        "username": "Username",
+        "password": "Password",
+        "loginButton": "Sign In",
+        "logout": "Logout",
+        "error": "Invalid credentials",
+        "welcome": "Welcome, {{name}}"
+    },
+    "instructor": {
+        "dashboard": "Dashboard",
+        "createCase": "Create New Case",
+        "manageCases": "Manage Cases",
+        "form": {
+            "title": "Case Title",
+            "modality": "Modality",
+            "difficulty": "Difficulty",
+            "history": "Clinical History",
+            "imageUrl": "Case Image",
+            "uploadImage": "Upload a file",
+            "orDrag": "or drag and drop",
+            "orEnterUrl": "Or enter Image URL",
+            "removeImage": "Remove image",
+            "correctDiagnosis": "Correct Diagnosis",
+            "submit": "Save Case",
+            "success": "Case created successfully"
+        },
+        "users": {
+            "title": "User Management",
+            "addUser": "Add User",
+            "editUser": "Edit User",
+            "deleteConfirm": "Are you sure you want to delete this user?",
+            "deleteCaseConfirm": "Are you sure you want to delete this case?",
+            "deleteModuleConfirm": "Are you sure you want to delete this module?",
+            "role": {
+                "student": "Student",
+                "admin": "Administrator",
+                "instructor": "Instructor"
+            },
+            "tableHeaders": {
+                "name": "Name",
+                "username": "Username",
+                "role": "Role",
+                "actions": "Actions"
+            },
+            "form": {
+                "name": "Full Name",
+                "username": "Username",
+                "password": "Password",
+                "role": "Role",
+                "save": "Save User",
+                "cancel": "Cancel"
+            }
+        }
+    },
+    "profile": {
+        "title": "My Profile",
+        "subtitle": "Manage your personal information and preferences.",
+        "name": "Display Name",
+        "username": "Username (Email)",
+        "avatar": "Avatar",
+        "changeAvatar": "Change Avatar",
+        "uploadAvatar": "Upload Image",
+        "presets": "Presets",
+        "preferences": "Preferences",
+        "theme": "Appearance",
+        "language": "Language",
+        "light": "Light",
+        "dark": "Dark",
+        "spanish": "Spanish",
+        "english": "English",
+        "save": "Save Changes",
+        "success": "Profile updated successfully"
+    },
+    "about": {
+        "title": "About the App",
+        "menuLink": "About",
+        "admin": {
+            "title": "Administration"
+        },
+        "changelog": {
+            "title": "Version History"
+        }
+    }
+}
