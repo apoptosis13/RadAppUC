@@ -24,6 +24,7 @@ const EditAnatomyPage = () => {
     });
 
     const [activeSeriesId, setActiveSeriesId] = useState(null);
+    const [editorImageIndex, setEditorImageIndex] = useState(0);
     const [error, setError] = useState(null);
 
     useEffect(() => {
@@ -227,6 +228,72 @@ const EditAnatomyPage = () => {
         }
     };
 
+    const handleReverseSeries = (seriesId) => {
+        if (!window.confirm("¿Invertir el orden de todas las imágenes y anotaciones de esta serie?")) return;
+
+        const s = formData.series.find(is => is.id === seriesId);
+        if (!s) return;
+
+        const totalImages = s.images.length;
+        if (totalImages === 0) return;
+
+        // 1. Reverse Images
+        const reversedImages = [...s.images].reverse();
+
+        // 2. Remap Structure Locations: newIndex = (N - 1) - oldIndex
+        const newStructures = (s.structures || []).map(struct => {
+            const newLocations = {};
+            Object.entries(struct.locations || {}).forEach(([oldIdxStr, data]) => {
+                const oldIdx = parseInt(oldIdxStr, 10);
+                const newIdx = (totalImages - 1) - oldIdx;
+                if (newIdx >= 0 && newIdx < totalImages) {
+                    newLocations[newIdx] = data;
+                }
+            });
+            return { ...struct, locations: newLocations };
+        });
+
+        // 3. Update Series
+        handleUpdateSeries(seriesId, {
+            images: reversedImages,
+            structures: newStructures
+        });
+    };
+
+    const handleDeleteImage = (seriesId, imageIndex) => {
+        if (!window.confirm("¿Eliminar esta imagen y sus anotaciones asociadas?")) return;
+
+        const s = formData.series.find(is => is.id === seriesId);
+        if (!s) return;
+
+        // 1. Filter Images
+        const newImages = s.images.filter((_, idx) => idx !== imageIndex);
+
+        // 2. Shift Structure Locations
+        // If idx < deletedIndex: keep
+        // If idx == deletedIndex: remove
+        // If idx > deletedIndex: shift down (idx - 1)
+        const newStructures = (s.structures || []).map(struct => {
+            const newLocations = {};
+            Object.entries(struct.locations || {}).forEach(([idxStr, data]) => {
+                const idx = parseInt(idxStr, 10);
+                if (idx < imageIndex) {
+                    newLocations[idx] = data;
+                } else if (idx > imageIndex) {
+                    newLocations[idx - 1] = data;
+                }
+                // idx == imageIndex is skipped (deleted)
+            });
+            return { ...struct, locations: newLocations };
+        });
+
+        // 3. Update Series
+        handleUpdateSeries(seriesId, {
+            images: newImages,
+            structures: newStructures
+        });
+    };
+
     const handleSubmit = async (e) => {
         e.preventDefault();
         setLoading(true);
@@ -275,7 +342,7 @@ const EditAnatomyPage = () => {
     const activeSeries = formData.series?.find(s => s.id === activeSeriesId);
 
     return (
-        <div className="w-full mx-auto space-y-6 pb-10 px-4">
+        <div className="w-full mx-auto space-y-6 pb-24 px-4">
             <div className="flex items-center justify-between">
                 <button
                     onClick={() => navigate('/instructor/anatomy')}
@@ -288,14 +355,6 @@ const EditAnatomyPage = () => {
                     <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
                         {isEditing ? 'Editar Módulo' : 'Crear Nuevo Módulo'}
                     </h1>
-                    <button
-                        onClick={handleSubmit}
-                        disabled={loading || uploading}
-                        className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50"
-                    >
-                        <Save className="-ml-1 mr-2 h-5 w-5" />
-                        {loading ? 'Guardando...' : 'Guardar Módulo'}
-                    </button>
                 </div>
             </div>
 
@@ -448,7 +507,7 @@ const EditAnatomyPage = () => {
                                     >
                                         <option value="axial">Axial</option>
                                         <option value="coronal">Coronal</option>
-                                        <option value="sagittal">Sagital</option>
+                                        <option value="sagital">Sagital</option>
                                         <option value="other">Otro</option>
                                     </select>
                                 </div>
@@ -612,8 +671,10 @@ const EditAnatomyPage = () => {
                                     <AnatomyEditor
                                         series={activeSeries}
                                         onUpdate={(updates) => handleUpdateSeries(activeSeries.id, updates)}
+                                        onReverseOrder={() => handleReverseSeries(activeSeries.id)}
+                                        onImageIndexChange={setEditorImageIndex}
                                     />
-                                    <div className="mt-2 flex justify-end items-center space-x-4">
+                                    <div className="mt-2 flex flex-col items-end space-y-2">
                                         {uploading && (
                                             <span className="text-sm text-indigo-500 font-medium">
                                                 Subiendo {uploadProgress.current} de {uploadProgress.total}...
@@ -635,6 +696,15 @@ const EditAnatomyPage = () => {
                                                 disabled={uploading}
                                             />
                                         </label>
+                                        <button
+                                            type="button"
+                                            onClick={() => handleDeleteImage(activeSeries.id, editorImageIndex)}
+                                            className="text-xs text-red-500 hover:text-red-700 font-medium flex items-center transition-colors"
+                                            title="Eliminar la imagen que se está viendo actualmente"
+                                        >
+                                            <Trash2 className="w-3 h-3 mr-1" />
+                                            Eliminar imagen actual
+                                        </button>
                                     </div>
                                 </div>
                             )}
@@ -655,7 +725,20 @@ const EditAnatomyPage = () => {
                     )}
                 </div>
             </div>
-        </div>
+
+
+            {/* Footer with Save Button */}
+            <div className="fixed bottom-0 right-0 w-full bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 p-4 flex justify-end z-50 shadow-lg">
+                <button
+                    onClick={handleSubmit}
+                    disabled={loading || uploading}
+                    className="inline-flex items-center px-6 py-3 border border-transparent rounded-md shadow-sm text-base font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50"
+                >
+                    <Save className="-ml-1 mr-2 h-5 w-5" />
+                    {loading ? 'Guardando...' : 'Guardar Módulo'}
+                </button>
+            </div>
+        </div >
     );
 };
 

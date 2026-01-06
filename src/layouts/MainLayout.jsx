@@ -23,7 +23,7 @@ const MainLayout = () => {
     ];
 
     // Immersive mode: Full width for Anatomy Viewer, Instructor Editors, and Anatomy Index
-    const isImmersive = location.pathname.includes('/anatomy') ||
+    const isImmersive = location.pathname.startsWith('/anatomy/') ||
         location.pathname.includes('/instructor/cases'); // Also cases management often needs space
 
     return (

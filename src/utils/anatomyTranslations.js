@@ -60,3 +60,26 @@ export const getLocalizedModuleField = (module, field, language) => {
     // 3. Return raw value (Spanish/Default)
     return module[field] || '';
 };
+
+/**
+ * Translates a specific anatomical term from Spanish to English.
+ * Currently uses a basic dictionary. Can be expanded or connected to an API.
+ */
+export const translateAnatomyTerm = (term) => {
+    if (!term) return '';
+    // Basic Dictionary expansion
+    const dictionary = {
+        'Fémur': 'Femur', 'Tibia': 'Tibia', 'Peroné': 'Fibula', 'Rótula': 'Patella',
+        'Húmero': 'Humerus', 'Cúbito': 'Ulna', 'Radio': 'Radius', 'Clavícula': 'Clavicle',
+        'Escápula': 'Scapula', 'Esternón': 'Sternum', 'Costilla': 'Rib', 'Vértebra': 'Vertebra',
+        'Cráneo': 'Skull', 'Mandíbula': 'Mandible', 'Hígado': 'Liver', 'Riñón': 'Kidney',
+        'Bazo': 'Spleen', 'Páncreas': 'Pancreas', 'Pulmón': 'Lung', 'Corazón': 'Heart',
+        'Estómago': 'Stomach', 'Intestino': 'Intestine', 'Vejiga': 'Bladder', 'Próstata': 'Prostate',
+        'Útero': 'Uterus', 'Ovario': 'Ovary', 'Músculo': 'Muscle', 'Tendón': 'Tendon',
+        'Ligamento': 'Ligament', 'Nervio': 'Nerve', 'Arteria': 'Artery', 'Vena': 'Vein'
+    };
+
+    // Simple lookup (case insensitive)
+    const key = Object.keys(dictionary).find(k => k.toLowerCase() === term.toLowerCase());
+    return key ? dictionary[key] : '';
+};

@@ -31,8 +31,7 @@ import {
     ZoomOut,
     Maximize,
     Hand,
-    Globe,
-    Magnet
+    Globe
 } from 'lucide-react';
 import { getSmoothPath } from '../../../utils/svgUtils';
 import { ANATOMY_CATEGORIES } from '../../../utils/anatomyConstants';
@@ -40,14 +39,12 @@ import { translateAnatomyTerm } from '../../../utils/anatomyTranslations';
 import { httpsCallable } from 'firebase/functions';
 import { functions } from '../../../config/firebase';
 
-
-
-const AnatomyEditor = ({ series, onUpdate, onReverseOrder, onImageIndexChange }) => {
+const AnatomyEditor = ({ series, onUpdate }) => {
     const { t } = useTranslation();
     const [currentImageIndex, setCurrentImageIndex] = useState(0);
     const [selectedTool, setSelectedTool] = useState('select'); // select, point, line, polygon, pan
     const [selectedCategory, setSelectedCategory] = useState('bones');
-    const [propagationRange, setPropagationRange] = useState('current'); // 'current', 'forward', '10', '20', 'all'
+    const [propagationRange, setPropagationRange] = useState('all'); // 'current', '10', '20', 'all'
     const [adjustments, setAdjustments] = useState({ rotate: 0, flipH: false, brightness: 100, contrast: 100 });
     const [viewport, setViewport] = useState({ cx: null, cy: null, scale: 1 });
     const [selectedAnnotationId, setSelectedAnnotationId] = useState(null);
@@ -58,162 +55,40 @@ const AnatomyEditor = ({ series, onUpdate, onReverseOrder, onImageIndexChange })
     const [isTranslating, setIsTranslating] = useState(false);
     const [showManagement, setShowManagement] = useState(false); // Legacy sidebar toggle
 
-    // Magnet Mode State
-    const [magnetActive, setMagnetActive] = useState(false);
-    const offscreenCanvasRef = useRef(null);
-
-    useEffect(() => {
-        onImageIndexChange?.(currentImageIndex);
-    }, [currentImageIndex, onImageIndexChange]);
-
-
     // Size State
     const [naturalSize, setNaturalSize] = useState({ width: 0, height: 0 });
     const [containerSize, setContainerSize] = useState({ width: 0, height: 0 });
+    const isImageLoaded = naturalSize.width > 0 && naturalSize.height > 0;
 
     const containerRef = useRef(null);
-    const canvasRef = useRef(null);
+    const canvasRef = useRef(null); // SVG Ref
 
-    const isImageLoaded = series.images && series.images.length > 0 && naturalSize.width > 0;
-    const currentImage = series.images && series.images.length > 0 ? series.images[currentImageIndex] : null;
-    const previewImageUrl = currentImage?.previewUrl || currentImage?.url;
-
-    // --- MAGNET MODE HELPERS ---
+    // Reset loop if index out of bounds
     useEffect(() => {
-        if (!currentImage || !isImageLoaded) return;
-
-        const img = new Image();
-        img.crossOrigin = "Anonymous";
-        img.src = currentImage.previewUrl || currentImage.url;
-        img.onload = () => {
-            if (!offscreenCanvasRef.current) {
-                offscreenCanvasRef.current = document.createElement('canvas');
-            }
-            const cvs = offscreenCanvasRef.current;
-            cvs.width = img.naturalWidth;
-            cvs.height = img.naturalHeight;
-            const ctx = cvs.getContext('2d');
-            ctx.drawImage(img, 0, 0);
-        };
-    }, [currentImage]);
-
-    const snapToEdge = (x, y) => {
-        if (!magnetActive || !offscreenCanvasRef.current) return { x, y };
-
-        const cvs = offscreenCanvasRef.current;
-        const ctx = cvs.getContext('2d');
-        const width = cvs.width;
-        const height = cvs.height;
-
-        const px = Math.floor(x * width);
-        const py = Math.floor(y * height);
-
-        const radius = 15;
-        let maxGradient = -1;
-        let bestX = x;
-        let bestY = y;
-
-        const sobelX = [[-1, 0, 1], [-2, 0, 2], [-1, 0, 1]];
-        const sobelY = [[-1, -2, -1], [0, 0, 0], [1, 2, 1]];
-
-        const startX = Math.max(1, px - radius);
-        const endX = Math.min(width - 2, px + radius);
-        const startY = Math.max(1, py - radius);
-        const endY = Math.min(height - 2, py + radius);
-
-        const patchW = endX - startX + 3;
-        const patchH = endY - startY + 3;
-
-        if (patchW <= 0 || patchH <= 0) return { x, y };
-
-        try {
-            const imageData = ctx.getImageData(startX - 1, startY - 1, patchW, patchH);
-            const data = imageData.data;
-
-            const getPixel = (ox, oy) => {
-                const idx = ((oy) * patchW + (ox)) * 4;
-                return (data[idx] + data[idx + 1] + data[idx + 2]) / 3;
-            };
-
-            for (let cy = 1; cy < patchH - 1; cy++) {
-                for (let cx = 1; cx < patchW - 1; cx++) {
-                    let gx = 0;
-                    let gy = 0;
-
-                    for (let i = -1; i <= 1; i++) {
-                        for (let j = -1; j <= 1; j++) {
-                            const val = getPixel(cx + j, cy + i);
-                            gx += val * sobelX[i + 1][j + 1];
-                            gy += val * sobelY[i + 1][j + 1];
-                        }
-                    }
-
-                    const gradient = Math.sqrt(gx * gx + gy * gy);
-
-                    const absX = (startX - 1 + cx);
-                    const absY = (startY - 1 + cy);
-                    const dx = absX - px;
-                    const dy = absY - py;
-                    const dist = Math.sqrt(dx * dx + dy * dy);
-
-                    const score = gradient / (1 + dist * 0.5);
-
-                    if (score > maxGradient && gradient > 50) {
-                        maxGradient = score;
-                        bestX = absX / width;
-                        bestY = absY / height;
-                    }
-                }
-            }
-        } catch (e) {
-            console.warn("Magnet processing error", e);
-            return { x, y };
+        if (series.images.length > 0 && currentImageIndex >= series.images.length) {
+            setCurrentImageIndex(0);
         }
+    }, [series.images.length]);
 
-        return { x: bestX, y: bestY };
-    };
-
-
-    // Load Image Dimensions
-    // Track previous series to avoid checking dimensions on every slice
-    const prevSeriesIdRef = useRef(series?.id);
+    const currentImage = series.images[currentImageIndex];
+    const previewImageUrl = currentImage?.previewUrl || currentImage?.url;
 
     // Load Image Dimensions
     useEffect(() => {
         if (!previewImageUrl) return;
-
-        const seriesChanged = series?.id !== prevSeriesIdRef.current;
-
-        // If series hasn't changed and we have dimensions, skip the "new Image()" check
-        // This prevents the "slow loading" feeling and layout shifts on scroll
-        if (!seriesChanged && naturalSize.width > 0 && naturalSize.height > 0) {
-            return;
-        }
-
-        if (seriesChanged) {
-            prevSeriesIdRef.current = series?.id;
-            // Optional: Reset size if you want to ensure no stale dimensions, 
-            // but for scrolling speed, keeping old size until new one loads is often better
-            // setNaturalSize({ width: 0, height: 0 }); 
-        }
-
         const img = new Image();
         img.src = previewImageUrl;
         img.onload = () => {
             setNaturalSize({ width: img.naturalWidth, height: img.naturalHeight });
-
-            // Only initialize viewport if it's the first load or series changed significantly
-            // We check cx === null for first load.
+            // Initialize Viewport Center if first load
             setViewport(prev => {
-                if (prev.cx === null || seriesChanged) {
+                if (prev.cx === null) {
                     return { cx: img.naturalWidth / 2, cy: img.naturalHeight / 2, scale: 1 };
                 }
                 return prev;
             });
         };
-    }, [previewImageUrl, series?.id]); // Depend on URL AND series ID
-
-
+    }, [previewImageUrl]); // Depend on URL to reload if image changes
 
     // Resize Observer
     useEffect(() => {
@@ -315,16 +190,17 @@ const AnatomyEditor = ({ series, onUpdate, onReverseOrder, onImageIndexChange })
                 else if (propagationRange === 'forward') endIndex = series.images.length; // Custom 'forward' logic or same as all from here? 'forward' usually means all from here.
 
                 // Apply update to range
-                // Apply update to range
                 for (let i = currentIndex; i < endIndex; i++) {
                     // Start propagation
                     if (newLocations[i]) {
-                        // User Request: Only propagate to EXISTING points. Do not create new ones.
                         newLocations[i] = { ...newLocations[i], ...validUpdates };
+                    } else if (propagationRange !== 'current') {
+                        // If standardizing creation on propagation:
+                        // newLocations[i] = { ...validUpdates }; 
+                        // But usually we only update EXISTING points in a drag unless we want to CREATE points?
+                        // For "Edit", we usually modify existing. 
+                        newLocations[i] = { ...(newLocations[i] || {}), ...validUpdates };
                     }
-                    // REMOVED: Implicit creation of points. 
-                    // If the user wants to ADD points to a slice, they should use the add tool or copy/paste (future feature).
-                    // Dragging an existing point should simply adjust the "track".
                 }
 
                 newStructures[structureIndex] = { ...structure, locations: newLocations };
@@ -353,7 +229,7 @@ const AnatomyEditor = ({ series, onUpdate, onReverseOrder, onImageIndexChange })
         const currentIndex = Number(currentImageIndex);
         let endIndex = series.images.length;
 
-        if (propagationRange === 'current' || propagationRange === 'forward') endIndex = currentIndex + 1;
+        if (propagationRange === 'current') endIndex = currentIndex + 1;
         else if (propagationRange === '10') endIndex = Math.min(series.images.length, currentIndex + 10);
         else if (propagationRange === '20') endIndex = Math.min(series.images.length, currentIndex + 20);
 
@@ -373,67 +249,6 @@ const AnatomyEditor = ({ series, onUpdate, onReverseOrder, onImageIndexChange })
         };
         onUpdate({ structures: [...seriesStructures, newStructure] });
         setSelectedAnnotationId(newId);
-    };
-
-
-    // --- POLYGON EDITING HELPERS ---
-    const deletePolygonPoint = (id, pointIndex) => {
-        const structure = seriesStructures.find(s => s.id === id);
-        if (!structure) return;
-
-        const currentPoints = structure.locations && structure.locations[currentImageIndex] ? structure.locations[currentImageIndex].points : null;
-        if (currentPoints) {
-            // Remove the point
-            const newPoints = currentPoints.filter((_, i) => i !== pointIndex);
-
-            // Allow down to 2 points? If < 3 it's technically a line, but usually we allow editing freely.
-            // If empty, maybe delete? Let's minimal logic.
-
-            handleAnnotationUpdate(id, { points: newPoints, _forceCurrent: true });
-        }
-    };
-
-    const insertPolygonPoint = (id, clickPoint) => {
-        const structure = seriesStructures.find(s => s.id === id);
-        if (!structure) return;
-
-        const currentPoints = structure.locations && structure.locations[currentImageIndex] ? structure.locations[currentImageIndex].points : null;
-        if (!currentPoints || currentPoints.length < 2) return;
-
-        // Find closest segment
-        let minDistance = Infinity;
-        let insertIndex = -1;
-        let newPoint = null;
-
-        for (let i = 0; i < currentPoints.length; i++) {
-            const p1 = currentPoints[i];
-            const p2 = currentPoints[(i + 1) % currentPoints.length]; // Wrap around
-
-            // Distance from point to line segment
-            const l2 = Math.pow(p2.x - p1.x, 2) + Math.pow(p2.y - p1.y, 2);
-            if (l2 === 0) continue; // p1 == p2
-
-            let t = ((clickPoint.x - p1.x) * (p2.x - p1.x) + (clickPoint.y - p1.y) * (p2.y - p1.y)) / l2;
-            t = Math.max(0, Math.min(1, t)); // Clamp to segment
-
-            const projX = p1.x + t * (p2.x - p1.x);
-            const projY = p1.y + t * (p2.y - p1.y);
-
-            const d = Math.sqrt(Math.pow(clickPoint.x - projX, 2) + Math.pow(clickPoint.y - projY, 2));
-
-            if (d < minDistance) {
-                minDistance = d;
-                insertIndex = i + 1; // Insert AFTER p1
-                const snapped = snapToEdge(projX, projY);
-                newPoint = { x: snapped.x, y: snapped.y };
-            }
-        }
-
-        if (insertIndex !== -1 && newPoint) {
-            const newPoints = [...currentPoints];
-            newPoints.splice(insertIndex, 0, newPoint);
-            handleAnnotationUpdate(id, { points: newPoints, _forceCurrent: true });
-        }
     };
 
     const handleDeleteAnnotation = (id, scope = 'current') => {
@@ -536,8 +351,7 @@ const AnatomyEditor = ({ series, onUpdate, onReverseOrder, onImageIndexChange })
     };
     const handleMouseDown = (e) => {
         // Panning Logic handled separately or integrated?
-        // Button 0: Left, 1: Middle, 2: Right
-        if (selectedTool === 'pan' || e.button === 1 || e.button === 2) {
+        if (selectedTool === 'pan' || e.button === 1) { // Middle click usually 1
             setIsPanning(true);
             return;
         }
@@ -558,13 +372,10 @@ const AnatomyEditor = ({ series, onUpdate, onReverseOrder, onImageIndexChange })
                 setSelectedTool('select');
             }
         } else if (selectedTool === 'polygon') {
-            const rawPoint = { x: pt.x, y: pt.y };
-            const snapped = snapToEdge(pt.x, pt.y);
-            const newPoint = { x: snapped.x, y: snapped.y };
-
+            const newPoint = { x: pt.x, y: pt.y };
             if (currentPolygonPoints.length > 2) {
                 const start = currentPolygonPoints[0];
-                const dist = Math.sqrt(Math.pow(newPoint.x - start.x, 2) + Math.pow(newPoint.y - start.y, 2));
+                const dist = Math.sqrt(Math.pow(pt.x - start.x, 2) + Math.pow(pt.y - start.y, 2));
                 // 3% distance threshold (normalized) seems okay, maybe check pixel distance
                 if (dist < 0.03) {
                     addSeriesStructure('polygon', { points: currentPolygonPoints });
@@ -624,14 +435,8 @@ const AnatomyEditor = ({ series, onUpdate, onReverseOrder, onImageIndexChange })
             if (!pt) return;
 
             // Bound to 0-1
-            let nx = Math.max(0, Math.min(1, pt.x));
-            let ny = Math.max(0, Math.min(1, pt.y));
-
-            if (magnetActive) {
-                const snapped = snapToEdge(nx, ny);
-                nx = snapped.x;
-                ny = snapped.y;
-            }
+            const nx = Math.max(0, Math.min(1, pt.x));
+            const ny = Math.max(0, Math.min(1, pt.y));
 
             if (dragging.pointIndex !== undefined && dragging.pointIndex !== null) {
                 // Polygon Vertex
@@ -663,46 +468,6 @@ const AnatomyEditor = ({ series, onUpdate, onReverseOrder, onImageIndexChange })
     const handleDragStart = (e, id) => {
         setDragging({ id });
     };
-
-    const handleWheel = (e) => {
-        // Prevent default browser scrolling in all cases when hovering canvas
-        e.preventDefault();
-
-        if (e.ctrlKey || e.shiftKey) {
-            const delta = e.deltaY * -0.002;
-            setViewport(prev => {
-                const newScale = Math.min(Math.max(prev.scale * (1 + delta), 0.1), 20);
-                return { ...prev, scale: newScale };
-            });
-        } else {
-            if (series.images.length > 1) {
-                const direction = e.deltaY > 0 ? 1 : -1;
-                setCurrentImageIndex(prev => {
-                    const next = prev + direction;
-                    if (next < 0) return 0;
-                    if (next >= series.images.length) return series.images.length - 1;
-                    return next;
-                });
-            }
-        }
-    };
-
-    // Native Wheel Listener to prevent default scroll (passive: false is required for this)
-    useEffect(() => {
-        const currentContainer = containerRef.current;
-        if (currentContainer) {
-            const handleWheelNative = (e) => {
-                // We must call preventDefault here to stop browser scroll
-                e.preventDefault();
-                handleWheel(e);
-            };
-            // passive: false allows us to call preventDefault
-            currentContainer.addEventListener('wheel', handleWheelNative, { passive: false });
-            return () => {
-                currentContainer.removeEventListener('wheel', handleWheelNative);
-            };
-        }
-    }, [handleWheel]); // Re-attach if handleWheel changes (it shouldn't often, but safe)
 
     // --- RENDER HELPERS ---
     const project = (x, y) => ({ x: x * naturalSize.width, y: y * naturalSize.height });
@@ -772,35 +537,6 @@ const AnatomyEditor = ({ series, onUpdate, onReverseOrder, onImageIndexChange })
                     <button onClick={() => setAdjustments(p => ({ ...p, flipH: !p.flipH }))} className="p-2 rounded text-gray-400 hover:bg-gray-700" title="Voltear Horizontalmente">
                         <FlipHorizontal className="w-5 h-5" />
                     </button>
-                    {onReverseOrder && (
-                        <button
-                            onClick={onReverseOrder}
-                            className="p-2 rounded text-gray-400 hover:bg-gray-700 hover:text-indigo-400"
-                            title="Invertir Orden de Serie"
-                        >
-                            <ArrowUpDown className="w-5 h-5" />
-                        </button>
-                    )}
-                </div>
-
-                {/* Magnet Toggle */}
-                <div className="flex items-center space-x-2 ml-4 border-l border-gray-700 pl-4">
-                    <button
-                        onClick={() => setMagnetActive(!magnetActive)}
-                        className={`p-2 rounded flex items-center space-x-1 ${magnetActive ? 'bg-indigo-600 text-white' : 'text-gray-400 hover:bg-gray-700'}`}
-                        title="Modo Imán: Ajuste automático a bordes"
-                    >
-                        <Magnet className="w-5 h-5" />
-                        <span className="text-xs font-medium hidden sm:inline">Imán</span>
-                    </button>
-                    <button
-                        onClick={() => setPropagationRange(prev => prev === 'current' ? 'forward' : 'current')}
-                        className={`p-2 rounded flex items-center space-x-1 ${propagationRange === 'forward' ? 'bg-indigo-600 text-white' : 'text-gray-400 hover:bg-gray-700'}`}
-                        title={propagationRange === 'forward' ? "Editando hacia adelante (Click para solo actual)" : "Editar solo actual (Click para editar hacia adelante)"}
-                    >
-                        <FastForward className="w-5 h-5" />
-                        <span className="text-xs font-medium hidden sm:inline">Adelante</span>
-                    </button>
                 </div>
 
                 {/* Top Right Controls */}
@@ -840,7 +576,6 @@ const AnatomyEditor = ({ series, onUpdate, onReverseOrder, onImageIndexChange })
                                 onMouseMove={handleMouseMove}
                                 onMouseUp={handleMouseUp}
                                 onMouseLeave={handleMouseUp}
-                                onContextMenu={(e) => e.preventDefault()} // Disable context menu for Right Click Pan
                                 style={{ cursor: selectedTool === 'pan' || isPanning ? 'grabbing' : (selectedTool === 'select' ? 'default' : 'crosshair') }}
                             >
                                 <g
@@ -851,19 +586,12 @@ const AnatomyEditor = ({ series, onUpdate, onReverseOrder, onImageIndexChange })
                                         transition: isPanning ? 'none' : 'transform 0.3s'
                                     }}
                                 >
-                                    {(series.images || []).map((img, idx) => (
-                                        <image
-                                            key={idx}
-                                            href={img.previewUrl || img.url}
-                                            width={naturalSize.width}
-                                            height={naturalSize.height}
-                                            style={{
-                                                opacity: (idx === currentImageIndex) ? 1 : 0,
-                                                pointerEvents: 'none',
-                                                filter: `brightness(${adjustments.brightness}%) contrast(${adjustments.contrast}%)`
-                                            }}
-                                        />
-                                    ))}
+                                    <image
+                                        href={previewImageUrl}
+                                        width={naturalSize.width}
+                                        height={naturalSize.height}
+                                        style={{ filter: `brightness(${adjustments.brightness}%) contrast(${adjustments.contrast}%)` }}
+                                    />
                                     {annotations.map(ann => {
                                         const category = ANATOMY_CATEGORIES.find(c => c.id === ann.category);
                                         const color = category?.color || '#fff';
@@ -886,22 +614,8 @@ const AnatomyEditor = ({ series, onUpdate, onReverseOrder, onImageIndexChange })
                                         if (ann.type === 'polygon') {
                                             return (
                                                 <g key={ann.id} onClick={(e) => { e.stopPropagation(); setSelectedAnnotationId(ann.id); }}>
-                                                    {/* Hitbox/Buffer for easier clicking on line to add point */}
-                                                    <path d={getSmoothPath(ann.points)} fill="none" stroke="transparent" strokeWidth="15" vectorEffect="non-scaling-stroke"
-                                                        transform={`scale(${naturalSize.width / 100} ${naturalSize.height / 100})`}
-                                                        onClick={(e) => {
-                                                            if (e.ctrlKey) {
-                                                                e.stopPropagation();
-                                                                const pt = getSVGPoint(e);
-                                                                if (pt) insertPolygonPoint(ann.id, pt);
-                                                            }
-                                                        }}
-                                                        style={{ cursor: 'crosshair' }}
-                                                        title="Ctrl+Click para agregar punto"
-                                                    />
                                                     <path d={getSmoothPath(ann.points)} fill={color} fillOpacity="0.3" stroke={color} strokeWidth="2" vectorEffect="non-scaling-stroke"
                                                         transform={`scale(${naturalSize.width / 100} ${naturalSize.height / 100})`}
-                                                        style={{ pointerEvents: 'none' }}
                                                     />
                                                     {isSelected && ann.points.map((p, idx) => {
                                                         const px = p.x * naturalSize.width;
@@ -909,17 +623,8 @@ const AnatomyEditor = ({ series, onUpdate, onReverseOrder, onImageIndexChange })
                                                         const r = (naturalSize.width / 200) / viewport.scale;
                                                         return (
                                                             <circle key={idx} cx={px} cy={py} r={r} fill="white" stroke={color} strokeWidth={r / 2}
-                                                                onMouseDown={(e) => {
-                                                                    if (e.ctrlKey) {
-                                                                        e.stopPropagation();
-                                                                        deletePolygonPoint(ann.id, idx);
-                                                                    } else {
-                                                                        e.stopPropagation();
-                                                                        setDragging({ id: ann.id, pointIndex: idx });
-                                                                    }
-                                                                }}
+                                                                onMouseDown={(e) => { e.stopPropagation(); setDragging({ id: ann.id, pointIndex: idx }); }}
                                                                 style={{ cursor: 'move' }}
-                                                                title="Ctrl+Click para borrar punto"
                                                             />
                                                         );
                                                     })}
@@ -1187,7 +892,7 @@ const AnatomyEditor = ({ series, onUpdate, onReverseOrder, onImageIndexChange })
                     </div>
                 </div>
             </div>
-        </div >
+        </div>
     );
 
 };
