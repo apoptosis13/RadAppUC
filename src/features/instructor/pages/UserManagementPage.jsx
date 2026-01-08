@@ -45,38 +45,39 @@ const UserManagementPage = () => {
         loadUsers();
     }, [loadUsers]);
 
-    const handleStatusChange = async (email, newStatus, newRole) => {
+    const handleStatusChange = async (id, newStatus, newRole) => {
         try {
-            await authService.updateUserStatus(email, newStatus, newRole);
+            await authService.updateUserStatus(id, newStatus, newRole);
 
             // Log this administrative action if current user is super admin
             if (currentUser?.email === SUPER_ADMIN_EMAIL) {
                 const { activityLogService } = await import('../../../services/activityLogService');
+                const targetUser = users.find(u => u.id === id);
                 await activityLogService.logActivity('USER_STATUS_CHANGE', {
-                    targetUser: email,
+                    targetUser: targetUser?.email || id,
                     newStatus,
                     newRole
                 });
             }
 
             loadUsers();
-            if (selectedUser && selectedUser.email === email) {
-                const updatedUser = users.find(u => u.email === email);
+            if (selectedUser && selectedUser.id === id) {
+                const updatedUser = users.find(u => u.id === id);
                 if (updatedUser) setSelectedUser({ ...updatedUser, status: newStatus, role: newRole || updatedUser.role });
             }
         } catch (err) {
-            setError('Failed to update user status');
+            setError(err.message || 'Failed to update user status');
         }
     };
 
-    const handleDeleteUser = async (email) => {
-        if (window.confirm('¿Estás seguro de que quieres eliminar este usuario? Esta acción no se puede deshacer.')) {
+    const handleDeleteUser = async (id) => {
+        if (window.confirm('¿Estás seguro de que quieres eliminar este registro? Esta acción no se puede deshacer.')) {
             try {
-                await authService.deleteUser(email);
+                await authService.deleteUser(id);
                 loadUsers();
             } catch (err) {
                 console.error(err);
-                setError('Failed to delete user');
+                setError(err.message || 'Failed to delete user');
             }
         }
     };
@@ -120,10 +121,16 @@ const UserManagementPage = () => {
                     <tbody className="bg-white divide-y divide-gray-200">
                         {users.map((user) => {
                             const isTargetSuperAdmin = user.email === SUPER_ADMIN_EMAIL;
-                            const canManage = isSuperAdmin || user.role !== 'admin';
+                            const isCurrentActiveSession = user.id === currentUser?.uid;
+
+                            // allow management if:
+                            // 1. It's not a superadmin doc OR
+                            // 2. It's a superadmin doc but NOT the active session one (cleanup of dupes)
+                            const canManageDoc = !isTargetSuperAdmin || (isSuperAdmin && !isCurrentActiveSession);
+                            const canManageActions = isSuperAdmin || user.role !== 'admin';
 
                             return (
-                                <tr key={user.email}>
+                                <tr key={user.id}>
                                     <td className="px-6 py-4 whitespace-nowrap">
                                         <div className="flex items-center">
                                             <div className="h-8 w-8 rounded-full overflow-hidden bg-gray-100 relative">
@@ -153,17 +160,33 @@ const UserManagementPage = () => {
                                         </div>
                                     </td>
                                     <td className="px-6 py-4 whitespace-nowrap">
-                                        <div className="text-sm text-gray-500">
-                                            {isTargetSuperAdmin ?
-                                                <span className="text-purple-600 font-semibold">Administrador App Radiología UC</span>
-                                                : user.email}
+                                        <div className="flex flex-col">
+                                            <div className="text-sm text-gray-500 font-medium">
+                                                {isTargetSuperAdmin ? 'Administrador' : user.email}
+                                            </div>
+                                            <div className="flex items-center space-x-2 mt-1">
+                                                <span className={`text-[10px] px-1.5 py-0.5 rounded border leading-none font-bold uppercase tracking-wider ${user.id?.includes('@')
+                                                    ? 'bg-amber-50 text-amber-600 border-amber-200'
+                                                    : 'bg-indigo-50 text-indigo-600 border-indigo-200'
+                                                    }`}>
+                                                    {user.id?.includes('@') ? 'Legacy' : 'UID'}
+                                                </span>
+                                                <code className="text-[10px] text-gray-400 font-mono">
+                                                    #{user.id?.substring(user.id.length - 6)}
+                                                </code>
+                                            </div>
                                         </div>
                                     </td>
                                     <td className="px-6 py-4 whitespace-nowrap">
-                                        <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${user.role === 'admin' ? 'bg-purple-100 text-purple-800' :
-                                            user.role === 'student' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
+                                        <span className={`px-2.5 py-0.5 inline-flex text-xs leading-5 font-semibold rounded-full border ${isTargetSuperAdmin
+                                            ? 'bg-purple-50 text-purple-700 border-purple-200' :
+                                            user.role === 'admin' || user.role === 'instructor' ? 'bg-slate-50 text-slate-700 border-slate-200' :
+                                                user.role === 'student' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
+                                                    'bg-gray-50 text-gray-600 border-gray-200'
                                             }`}>
-                                            {user.role === 'admin' ? 'Instructor' : user.role === 'student' ? 'Alumno' : 'Invitado'}
+                                            {isTargetSuperAdmin ? 'Administrador' :
+                                                (user.role === 'admin' || user.role === 'instructor') ? 'Instructor' :
+                                                    user.role === 'student' ? 'Alumno' : 'Invitado'}
                                         </span>
                                     </td>
                                     <td className="px-6 py-4 whitespace-nowrap">
@@ -195,14 +218,14 @@ const UserManagementPage = () => {
                                                 </button>
                                             )}
 
-                                            {!isTargetSuperAdmin && canManage && (
+                                            {canManageDoc && canManageActions && (
                                                 <>
                                                     {user.status === 'pending' && (
                                                         <>
                                                             <button
                                                                 onClick={() => {
                                                                     const roleToAssign = (user.requestedRole === 'admin' || user.requestedRole === 'instructor') ? 'admin' : 'student';
-                                                                    handleStatusChange(user.email, 'approved', roleToAssign);
+                                                                    handleStatusChange(user.id, 'approved', roleToAssign);
                                                                 }}
                                                                 className="text-green-600 hover:text-green-900"
                                                                 title="Aprobar"
@@ -210,7 +233,7 @@ const UserManagementPage = () => {
                                                                 <Check className="w-5 h-5" />
                                                             </button>
                                                             <button
-                                                                onClick={() => handleStatusChange(user.email, 'rejected')}
+                                                                onClick={() => handleStatusChange(user.id, 'rejected')}
                                                                 className="text-red-600 hover:text-red-900"
                                                                 title="Rechazar"
                                                             >
@@ -221,7 +244,7 @@ const UserManagementPage = () => {
 
                                                     {user.status === 'approved' && (
                                                         <button
-                                                            onClick={() => handleStatusChange(user.email, 'suspended', user.role)}
+                                                            onClick={() => handleStatusChange(user.id, 'suspended', user.role)}
                                                             className="text-orange-600 hover:text-orange-900"
                                                             title="Suspender"
                                                         >
@@ -231,7 +254,7 @@ const UserManagementPage = () => {
 
                                                     {user.status === 'suspended' && (
                                                         <button
-                                                            onClick={() => handleStatusChange(user.email, 'approved', user.role)}
+                                                            onClick={() => handleStatusChange(user.id, 'approved', user.role)}
                                                             className="text-green-600 hover:text-green-900"
                                                             title="Reactivar"
                                                         >
@@ -240,9 +263,9 @@ const UserManagementPage = () => {
                                                     )}
 
                                                     <button
-                                                        onClick={() => handleDeleteUser(user.email)}
+                                                        onClick={() => handleDeleteUser(user.id)}
                                                         className="text-gray-400 hover:text-red-600"
-                                                        title="Eliminar (Reset)"
+                                                        title="Eliminar registro"
                                                     >
                                                         <Trash2 className="w-5 h-5" />
                                                     </button>
@@ -261,14 +284,15 @@ const UserManagementPage = () => {
                 <UserActivityModal
                     user={selectedUser}
                     onClose={() => setSelectedUser(null)}
-                    onRoleChange={async (email, status, newRole) => {
-                        await handleStatusChange(email, status, newRole);
+                    onRoleChange={async (id, status, newRole) => {
+                        await handleStatusChange(id, status, newRole);
                         const { activityLogService } = await import('../../../services/activityLogService');
+                        const targetUser = users.find(u => u.id === id);
                         await activityLogService.logActivity('USER_ROLE_CHANGE', {
-                            targetUser: email,
+                            targetUser: targetUser?.email || id,
                             newRole
                         });
-                        const updatedUser = users.find(u => u.email === email);
+                        const updatedUser = users.find(u => u.id === id);
                         if (updatedUser) setSelectedUser({ ...updatedUser, role: newRole });
                         loadUsers();
                     }}

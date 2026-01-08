@@ -6,6 +6,27 @@ import { activityLogService } from '../../../../services/activityLogService';
 import AnatomyEditor from "../../../anatomy/components/AnatomyEditor";
 import { ANATOMY_CATEGORIES } from '../../../../utils/anatomyConstants';
 
+const pruneData = (obj) => {
+    if (Array.isArray(obj)) {
+        return obj
+            .map(v => (v && typeof v === 'object') ? pruneData(v) : v)
+            .filter(v => v !== undefined &&
+                (Array.isArray(v) ? v.length > 0 : true) &&
+                (typeof v === 'object' && v !== null && !(v instanceof Date) ? Object.keys(v).length > 0 : true));
+    } else if (obj && typeof obj === 'object' && !(obj instanceof Date)) {
+        return Object.entries(obj).reduce((a, [k, v]) => {
+            const pruned = (v && typeof v === 'object') ? pruneData(v) : v;
+            if (pruned !== undefined &&
+                (Array.isArray(pruned) ? pruned.length > 0 : true) &&
+                (typeof pruned === 'object' && pruned !== null && !(pruned instanceof Date) ? Object.keys(pruned).length > 0 : true)) {
+                a[k] = pruned;
+            }
+            return a;
+        }, {});
+    }
+    return obj;
+};
+
 const EditAnatomyPage = () => {
     const { moduleId } = useParams();
     const navigate = useNavigate();
@@ -298,8 +319,8 @@ const EditAnatomyPage = () => {
         e.preventDefault();
         setLoading(true);
         try {
-            // Clean up previewUrls before saving
-            const cleanData = {
+            // 1. Initial cleaning of previewUrls
+            const baseCleanData = {
                 ...formData,
                 series: formData.series.map(s => ({
                     ...s,
@@ -307,31 +328,41 @@ const EditAnatomyPage = () => {
                 }))
             };
 
+            // 2. Recursive pruning of undefined/empty values
+            const cleanFinalData = pruneData(baseCleanData);
+
+            // 3. Size estimation and limit check
+            const stringified = JSON.stringify(cleanFinalData);
+            const sizeInBytes = new Blob([stringified]).size;
+            console.log(`Payload size: ${(sizeInBytes / 1024).toFixed(2)} KB`);
+
+            if (sizeInBytes > 1000000) {
+                throw new Error(`El módulo es demasiado grande (${(sizeInBytes / 1024 / 1024).toFixed(2)} MB). El límite de Firestore es 1 MB. Intenta dividirlo o reducir el número de anotaciones.`);
+            }
+
             if (isEditing) {
-                await anatomyService.updateModule(moduleId, cleanData);
+                await anatomyService.updateModule(moduleId, cleanFinalData);
             } else {
-                await anatomyService.createModule(cleanData);
+                await anatomyService.createModule(cleanFinalData);
             }
 
             // --- ACTIVITY LOG INJECTION ---
             try {
-                console.log('Attempting to log anatomy edit...');
                 await activityLogService.logActivity('EDIT_ANATOMY', {
                     moduleId: moduleId || 'NEW_MODULE',
-                    title: cleanData.title,
+                    title: cleanFinalData.title,
                     actionType: isEditing ? 'UPDATE' : 'CREATE'
                 });
-                console.log('Anatomy edit logged successfully.');
             } catch (e) {
-                console.error('CRITICAL: Failed to log anatomy edit:', e);
-                // We proceed anyway to not block the user flow
+                console.error('Failed to log activity:', e);
             }
             // ------------------------------
 
             navigate('/instructor/anatomy');
         } catch (error) {
             console.error("Error saving module:", error);
-            alert("Error al guardar el módulo");
+            const deployTs = "2026-01-08 00:50"; // Version marker
+            alert(`[v${deployTs}] Error al guardar el módulo: ${error.message || 'Error desconocido'}`);
         } finally {
             setLoading(false);
         }

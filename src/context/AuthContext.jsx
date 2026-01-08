@@ -28,43 +28,36 @@ export const AuthProvider = ({ children }) => {
                 localStorage.setItem('lastActivity', Date.now().toString());
 
                 try {
-                    // Fetch additional user data from Firestore (role, status)
+                    // Fetch additional user data from Firestore
                     const dbUser = await authService.getUserData(firebaseUser.email);
+
+                    const SUPER_ADMIN_EMAIL = 'gonzalodiazs@gmail.com';
+                    const isSuperAdmin = firebaseUser.email === SUPER_ADMIN_EMAIL;
+
                     if (dbUser) {
-                        setUser(dbUser);
+                        // FORCE PROTECTION: If it's super admin but DB is wrong, correct it locally and in DB
+                        if (isSuperAdmin && (dbUser.role !== 'admin' || dbUser.status !== 'approved')) {
+                            console.warn("Recovering super admin privileges...");
+                            const correctedUser = { ...dbUser, role: 'admin', status: 'approved' };
+                            setUser(correctedUser);
+                            // Correct in background
+                            authService.updateUser(dbUser.id || firebaseUser.email, { role: 'admin', status: 'approved' });
+                        } else {
+                            setUser(dbUser);
+                        }
                     } else {
-                        // User exists in Auth but not in DB (e.g. deleted by admin but session active)
-                        // Re-create the user document in Firestore as 'pending'
+                        // User exists in Auth but not in DB
                         const newUser = {
                             uid: firebaseUser.uid,
                             email: firebaseUser.email,
                             displayName: firebaseUser.displayName,
                             photoURL: firebaseUser.photoURL,
-                            role: 'guest',
-                            status: 'pending',
+                            role: isSuperAdmin ? 'admin' : 'guest',
+                            status: isSuperAdmin ? 'approved' : 'pending',
                             createdAt: new Date().toISOString()
                         };
 
-                        try {
-                            const { doc, setDoc } = await import('firebase/firestore');
-                            const { db } = await import('../config/firebase');
-                            // We need to use the imported functions here since we are in a hook/context 
-                            // but simpler to call a service method if possible.
-                            // Let's rely on authService for cleanliness if possible, or just use direct firestore here.
-                            // However, authService imports are available in this file scope if we check imports.
-                            // Checking imports in file... 'authService' is imported.
-
-                            // Let's call a new method `authService.ensureUserExists` or just `setDoc` manually?
-                            // authService has `loginWithGoogle` logic. Let's use authService.addUser/syncUser?
-
-                            // Easier: reuse authService logic? No, let's just write to DB here to fix it immediately.
-                            // Wait, imports at top of file don't include setDoc/db?
-                            // Checking imports...
-                        } catch (e) { console.error(e); }
-
-                        // Actually, let's use a service method to keep Context clean.
                         await authService.syncUser(newUser);
-
                         setUser(newUser);
                     }
                 } catch (error) {

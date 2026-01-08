@@ -17,18 +17,28 @@ export const authService = {
             const result = await signInWithPopup(auth, googleProvider);
             const user = result.user;
 
-            const userRef = doc(db, 'users', user.email);
-            const userSnap = await getDoc(userRef);
+            // 1. Try to find user by UID first (modern way)
+            let userSnap = await getDoc(doc(db, 'users', user.uid));
+            let userRef = doc(db, 'users', user.uid);
+            let isLegacy = false;
+
+            // 2. If not found, try by Email (legacy way)
+            if (!userSnap.exists()) {
+                const emailRef = doc(db, 'users', user.email);
+                const emailSnap = await getDoc(emailRef);
+                if (emailSnap.exists()) {
+                    userSnap = emailSnap;
+                    userRef = emailRef;
+                    isLegacy = true;
+                }
+            }
 
             let dbUser;
+            const isSuperAdmin = user.email === SUPER_ADMIN_EMAIL;
 
             if (!userSnap.exists()) {
-                // New user
-                const isSuperAdmin = user.email === SUPER_ADMIN_EMAIL;
-
-                // Generate random avatar if none provided by provider
+                // New user - Use UID as ID
                 const avatar = user.photoURL || getRandomAvatar(user.uid);
-
                 dbUser = {
                     uid: user.uid,
                     email: user.email,
@@ -38,38 +48,40 @@ export const authService = {
                     status: isSuperAdmin ? 'approved' : 'pending',
                     createdAt: new Date().toISOString()
                 };
-
+                userRef = doc(db, 'users', user.uid); // Ensure we use UID for new docs
                 await setDoc(userRef, dbUser);
             } else {
-                // Update existing user info from Google if needed
-                dbUser = userSnap.data();
+                // Update existing user info
+                dbUser = { id: userSnap.id, ...userSnap.data() };
 
-                // Ensure Super Admin always has admin rights
-                if (user.email === SUPER_ADMIN_EMAIL && dbUser.role !== 'admin') {
+                // Force Super Admin rights
+                if (isSuperAdmin && (dbUser.role !== 'admin' || dbUser.status !== 'approved')) {
                     dbUser.role = 'admin';
                     dbUser.status = 'approved';
                     await updateDoc(userRef, { role: 'admin', status: 'approved' });
                 } else {
                     // Update profile info
-                    await updateDoc(userRef, {
+                    const updates = {
                         displayName: user.displayName,
-                        photoURL: user.photoURL
-                    });
+                        photoURL: user.photoURL,
+                        uid: user.uid // Ensure UID is stored even in legacy docs
+                    };
+                    await updateDoc(userRef, updates);
+                    dbUser = { ...dbUser, ...updates };
                 }
             }
 
-            // --- ACTIVITY LOG INJECTION ---
+            // Log activity
             try {
-                // Dynamically import to avoid circular dependencies if any
                 const { activityLogService } = await import('./activityLogService');
                 await activityLogService.logActivity('LOGIN', {
                     method: 'google',
-                    email: user.email
+                    email: user.email,
+                    isLegacy
                 });
             } catch (e) {
                 console.error('Failed to log login:', e);
             }
-            // ------------------------------
 
             return dbUser;
         } catch (error) {
@@ -88,9 +100,18 @@ export const authService = {
 
     getUserData: async (email) => {
         try {
+            // Priority 1: Current UID if authenticated
+            const currentUser = auth.currentUser;
+            if (currentUser) {
+                const uidRef = doc(db, 'users', currentUser.uid);
+                const uidSnap = await getDoc(uidRef);
+                if (uidSnap.exists()) return { id: uidSnap.id, ...uidSnap.data() };
+            }
+
+            // Priority 2: Email lookup
             const userRef = doc(db, 'users', email);
             const userSnap = await getDoc(userRef);
-            return userSnap.exists() ? userSnap.data() : null;
+            return userSnap.exists() ? { id: userSnap.id, ...userSnap.data() } : null;
         } catch (error) {
             console.error("Error fetching user data:", error);
             return null;
@@ -100,20 +121,27 @@ export const authService = {
     // Admin methods
     getAllUsers: async () => {
         const querySnapshot = await getDocs(collection(db, 'users'));
-        return querySnapshot.docs.map(doc => doc.data());
+        return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
     },
 
-    updateUserStatus: async (email, newStatus, newRole) => {
-        if (email === SUPER_ADMIN_EMAIL) {
-            throw new Error("Cannot modify Super Admin status");
+    updateUserStatus: async (docId, newStatus, newRole) => {
+        const userRef = doc(db, 'users', docId);
+        const userSnap = await getDoc(userRef);
+
+        if (!userSnap.exists()) throw new Error("Usuario no encontrado");
+        const userData = userSnap.data();
+
+        // Protection: Don't allow changing super admin status
+        if (userData.email === SUPER_ADMIN_EMAIL) {
+            throw new Error("No se puede modificar el estado del Administrador Principal");
         }
-        const userRef = doc(db, 'users', email);
+
         const updates = { status: newStatus };
         if (newRole !== undefined) {
             updates.role = newRole;
         }
         await updateDoc(userRef, updates);
-        return { email, ...updates };
+        return { id: docId, ...updates };
     },
 
     // For user to request a role
@@ -124,11 +152,28 @@ export const authService = {
         return userSnap.data();
     },
 
-    deleteUser: async (email) => {
-        if (email === SUPER_ADMIN_EMAIL) {
-            throw new Error("Cannot delete Super Admin");
+    deleteUser: async (docId) => {
+        const currentUser = auth.currentUser;
+        if (!currentUser) throw new Error("No autenticado");
+
+        // Protection: Don't allow deleting the ACTIVE session document
+        if (docId === currentUser.uid) {
+            throw new Error("No puedes eliminar el documento de tu sesión activa");
         }
-        await deleteDoc(doc(db, 'users', email));
+
+        const userRef = doc(db, 'users', docId);
+        const userSnap = await getDoc(userRef);
+
+        if (!userSnap.exists()) return;
+
+        const userData = userSnap.data();
+
+        // Protection: Non-superadmins cannot delete a superadmin doc
+        if (userData.email === SUPER_ADMIN_EMAIL && currentUser.email !== SUPER_ADMIN_EMAIL) {
+            throw new Error("Solo el Administrador Principal puede eliminar documentos de Admin");
+        }
+
+        await deleteDoc(userRef);
     },
 
     // ... (rest of the file)

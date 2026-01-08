@@ -9,14 +9,14 @@ service cloud.firestore {
       return request.auth != null;
     }
     
-    // Fetch user data from the 'users' collection using their email (doc ID)
-    function getUserData() {
-      return get(/databases/$(database)/documents/users/$(request.auth.token.email)).data;
-    }
-    
-    // Check if the user has the 'admin' role
+    // Check if the user has the 'admin' role (Checks both UID and Email indexed documents)
     function isAdmin() {
-      return isAuthenticated() && getUserData().role == 'admin';
+      return isAuthenticated() && (
+        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
+         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin') ||
+        (exists(/databases/$(database)/documents/users/$(request.auth.token.email)) && 
+         get(/databases/$(database)/documents/users/$(request.auth.token.email)).data.role == 'admin')
+      );
     }
 
     // Check if the user is the Super Admin (Hardcoded protection)
@@ -27,19 +27,18 @@ service cloud.firestore {
     // --- Collection Rules ---
 
     // Users Collection
-    // Doc ID is the user's email
-    match /users/{email} {
+    // Supports both UID and Email as document IDs
+    match /users/{userId} {
       // Authenticated users can read valid profiles (needed for UI)
       allow read: if isAuthenticated();
       
-      // Creation: Only allow if the auth email matches the doc ID (Self-registration)
-      // And strict validation of initial data could be added here, but broadly:
-      allow create: if isAuthenticated() && request.auth.token.email == email;
+      // Creation: Only allow if the auth matches the doc ID (Self-registration)
+      allow create: if isAuthenticated() && (request.auth.uid == userId || request.auth.token.email == userId);
       
       // Updates: 
-      // 1. User can update their own non-sensitive fields (handled by logic, but rules allow write to own doc)
+      // 1. User can update their own non-sensitive fields
       // 2. Admins can update any user (approvals, role changes)
-      allow update: if isAuthenticated() && (request.auth.token.email == email || isAdmin());
+      allow update: if isAuthenticated() && (request.auth.uid == userId || request.auth.token.email == userId || isAdmin());
       
       // Deletion: Only Super Admin can delete users
       allow delete: if isSuperAdmin();

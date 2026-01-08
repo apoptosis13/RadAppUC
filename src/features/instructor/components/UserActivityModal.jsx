@@ -21,7 +21,7 @@ const UserActivityModal = ({ user, onClose, onRoleChange }) => {
 
     const handleRoleUpdate = async () => {
         if (selectedRole !== user.role) {
-            await onRoleChange(user.email, user.status, selectedRole);
+            await onRoleChange(user.id, user.status, selectedRole);
         }
     };
 
