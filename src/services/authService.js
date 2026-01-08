@@ -145,11 +145,11 @@ export const authService = {
     },
 
     // For user to request a role
-    requestRole: async (email, requestedRole) => {
-        const userRef = doc(db, 'users', email);
+    requestRole: async (docId, requestedRole) => {
+        const userRef = doc(db, 'users', docId);
         await updateDoc(userRef, { requestedRole });
         const userSnap = await getDoc(userRef);
-        return userSnap.data();
+        return { id: docId, ...userSnap.data() };
     },
 
     deleteUser: async (docId) => {
@@ -200,7 +200,7 @@ export const authService = {
         await setDoc(userRef, userData, { merge: true });
     },
 
-    updateUserProfile: async (uid, data) => {
+    updateUserProfile: async (docId, data) => {
         // data: { displayName, photoURL, preferences: { theme, language } }
         const user = auth.currentUser;
         if (!user) throw new Error("No authenticated user");
@@ -215,13 +215,12 @@ export const authService = {
         }
 
         // 2. Update Firestore (preferences, etc)
-        // We use email as doc ID
-        const userRef = doc(db, 'users', user.email);
+        const userRef = doc(db, 'users', docId);
         await setDoc(userRef, data, { merge: true });
 
         // Return updated combined data
         const snap = await getDoc(userRef);
-        return { ...user, ...snap.data() };
+        return { id: docId, ...snap.data() };
     },
 
     uploadAvatar: async (file, uid) => {

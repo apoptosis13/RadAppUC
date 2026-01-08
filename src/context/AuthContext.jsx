@@ -100,7 +100,7 @@ export const AuthProvider = ({ children }) => {
         if (!user) return;
         setLoading(true);
         try {
-            const updatedUser = await authService.requestRole(user.email, role);
+            const updatedUser = await authService.requestRole(user.id, role);
             setUser(updatedUser);
         } finally {
             setLoading(false);
@@ -111,7 +111,7 @@ export const AuthProvider = ({ children }) => {
         if (!user) return;
         setLoading(true);
         try {
-            const updatedUser = await authService.updateUserProfile(user.uid, data);
+            const updatedUser = await authService.updateUserProfile(user.id, data);
             setUser(prev => ({ ...prev, ...updatedUser }));
             return updatedUser;
         } finally {

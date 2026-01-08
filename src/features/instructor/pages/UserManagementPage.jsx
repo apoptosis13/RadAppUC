@@ -54,7 +54,7 @@ const UserManagementPage = () => {
                 const { activityLogService } = await import('../../../services/activityLogService');
                 const targetUser = users.find(u => u.id === id);
                 await activityLogService.logActivity('USER_STATUS_CHANGE', {
-                    targetUser: targetUser?.email || id,
+                    targetUser: targetUser?.email === SUPER_ADMIN_EMAIL ? 'Administrador' : (targetUser?.email || id),
                     newStatus,
                     newRole
                 });
@@ -289,7 +289,7 @@ const UserManagementPage = () => {
                         const { activityLogService } = await import('../../../services/activityLogService');
                         const targetUser = users.find(u => u.id === id);
                         await activityLogService.logActivity('USER_ROLE_CHANGE', {
-                            targetUser: targetUser?.email || id,
+                            targetUser: targetUser?.email === SUPER_ADMIN_EMAIL ? 'Administrador' : (targetUser?.email || id),
                             newRole
                         });
                         const updatedUser = users.find(u => u.id === id);
