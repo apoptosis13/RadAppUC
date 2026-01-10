@@ -25,3 +25,6 @@ dist-ssr
 *.txt
 check_dicebear.js
 download_clean_avatars.js
+
+# Firebase
+.firebase/

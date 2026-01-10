@@ -50,7 +50,12 @@
         ]
     },
     "functions": {
-        "source": "functions"
+        "source": "functions",
+        "ignore": [
+            "node_modules",
+            "package-lock.json",
+            "firebase-debug.log"
+        ]
     },
     "firestore": {
         "rules": "firestore.rules",

@@ -3,6 +3,7 @@ const functions = require("firebase-functions");
 const admin = require("firebase-admin");
 const { Translate } = require("@google-cloud/translate").v2;
 const nodemailer = require('nodemailer');
+const cors = require('cors')({ origin: true });
 
 admin.initializeApp();
 const translate = new Translate();
@@ -268,3 +269,154 @@ exports.notifyUserStatusChange = functions.firestore
         }
         return null;
     });
+
+// --- DEBUG & CONNECTIVITY ---
+exports.pingAI = functions.https.onCall((data, context) => {
+    return { status: "ok", message: "AI function is reachable", timestamp: new Date().toISOString() };
+});
+
+// --- AI-POWERED FINDINGS ANALYSIS ---
+exports.analyzeFindingsAI = functions.https.onCall(async (data, context) => {
+    // Check authentication
+    if (!context.auth) {
+        throw new functions.https.HttpsError(
+            'unauthenticated',
+            'Only authenticated users can request AI analysis.'
+        );
+    }
+
+    const { userFindings, expertFindings, keywords } = data;
+
+    if (!userFindings || !expertFindings) {
+        throw new functions.https.HttpsError(
+            'invalid-argument',
+            'Missing required arguments: userFindings or expertFindings.'
+        );
+    }
+
+    const apiKey = functions.config().gemini?.key;
+    if (!apiKey) {
+        console.error("Gemini API key is missing in functions config.");
+        return {
+            error: "AI_CONFIG_MISSING",
+            score: 0,
+            feedback: "El servicio de IA no está configurado en el servidor. Contacte al administrador."
+        };
+    }
+
+    try {
+        console.log("Starting AI analysis for findings...");
+
+        const prompt = `
+            Eres un experto radiólogo asistiendo en la evaluación de residentes. 
+            Compara los "Hallazgos del Alumno" con los "Hallazgos del Experto".
+            
+            Hallazgos del Alumno: "${userFindings}"
+            Hallazgos del Experto: "${expertFindings}"
+            Palabras Clave Sugeridas: ${keywords ? keywords.join(", ") : "N/A"}
+            
+            Evalúa la precisión semántica y clínica, no solo la coincidencia exacta de palabras.
+            Responde estrictamente en formato JSON con la siguiente estructura:
+            {
+                "score": (número entre 0 y 1, donde 1 es perfecto),
+                "matches": ["concepto detectado 1", "concepto detectado 2"],
+                "misses": ["concepto omitido importante 1"],
+                "feedback": "Breve comentario constructivo en español (máximo 2 frases)."
+            }
+        `;
+
+        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                contents: [{ parts: [{ text: prompt }] }],
+                generationConfig: { responseMimeType: "application/json" }
+            })
+        });
+
+        functions.logger.log("Gemini API call made. Status:", response.status);
+
+        if (!response.ok) {
+            const errorText = await response.text();
+            console.error("Gemini REST API Error Response:", errorText);
+            throw new Error(`Error de la API de Gemini (${response.status})`);
+        }
+
+        const result = await response.json();
+
+        if (!result.candidates || !result.candidates[0]?.content?.parts[0]?.text) {
+            console.error("Unexpected Gemini response structure:", JSON.stringify(result));
+            throw new Error("Respuesta inesperada de la IA.");
+        }
+
+        const responseText = result.candidates[0].content.parts[0].text;
+
+        try {
+            return JSON.parse(responseText);
+        } catch (parseError) {
+            console.error("JSON Parse Error:", parseError, "Response text:", responseText);
+            throw new Error("La IA devolvió un formato inválido.");
+        }
+
+    } catch (error) {
+        console.error("Gemini AI Error:", error);
+        return {
+            error: "AI_EXECUTION_FAILED",
+            message: error.message || "Error desconocido en la ejecución de la IA",
+            details: error.toString()
+        };
+    }
+});
+
+// --- AI-POWERED FINDINGS ANALYSIS (HTTP VERSION FOR CORS RELIABILITY) ---
+exports.analyzeFindingsAI_http = functions.https.onRequest((req, res) => {
+    return cors(req, res, async () => {
+        try {
+            // Manual Auth check (using ID Token in Authorization header)
+            const idToken = req.headers.authorization?.split('Bearer ')[1];
+            if (!idToken) {
+                return res.status(401).send({ error: "UNAUTHENTICATED" });
+            }
+
+            // Verify token
+            const decodedToken = await admin.auth().verifyIdToken(idToken);
+            if (!decodedToken) {
+                return res.status(401).send({ error: "INVALID_AUTH" });
+            }
+
+            const { userFindings, expertFindings, keywords } = req.body.data || {};
+            if (!userFindings || !expertFindings) {
+                return res.status(400).send({ error: "MISSING_DATA" });
+            }
+
+            const apiKey = functions.config().gemini?.key;
+            if (!apiKey) {
+                return res.status(500).send({ error: "AI_CONFIG_MISSING" });
+            }
+
+            const prompt = `Evalúa estos hallazgos:\nAlumno: ${userFindings}\nExperto: ${expertFindings}\nResponde JSON {score, matches, misses, feedback}`;
+
+            const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    contents: [{ parts: [{ text: prompt }] }],
+                    generationConfig: { responseMimeType: "application/json" }
+                })
+            });
+
+            if (!response.ok) {
+                const err = await response.text();
+                return res.status(500).send({ error: "AI_API_ERROR", details: err });
+            }
+
+            const result = await response.json();
+            const responseText = result.candidates[0].content.parts[0].text;
+            res.json({ data: JSON.parse(responseText) });
+
+        } catch (error) {
+            console.error("HTTP AI Error:", error);
+            res.status(500).json({ error: "INTERNAL_ERROR", message: error.message });
+        }
+    });
+});

@@ -8,34 +8,43 @@ service firebase.storage {
     }
 
     // Check if user is Admin by reading their Firestore profile
-    // Note: This matches the structure in authService (users collection keyed by email)
+    // Supports both UID and Email as document IDs
     function isAdmin() {
-      return isAuthenticated() && 
-             firestore.get(/databases/(default)/documents/users/$(request.auth.token.email)).data.role == 'admin';
+      return isAuthenticated() && (
+        (firestore.exists(/databases/(default)/documents/users/$(request.auth.uid)) && 
+         firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.role == 'admin') ||
+        (firestore.exists(/databases/(default)/documents/users/$(request.auth.token.email)) && 
+         firestore.get(/databases/(default)/documents/users/$(request.auth.token.email)).data.role == 'admin')
+      );
+    }
+
+    // Check if user is the Super Admin (Hardcoded protection)
+    function isSuperAdmin() {
+      return isAuthenticated() && request.auth.token.email == 'gonzalodiazs@gmail.com';
     }
 
     // --- RULES ---
 
     // 1. Anatomy Modules (Images)
     // Read: Any logged-in user (Students/Instructors)
-    // Write: Admins only
+    // Write: Admins or Super Admin
     match /anatomy/{allPaths=**} {
       allow read: if isAuthenticated();
-      allow write: if isAdmin();
+      allow write: if isAdmin() || isSuperAdmin();
     }
 
     // 2. Clinical Cases (Images)
     // Read: Any logged-in user
-    // Write: Admins only
+    // Write: Admins or Super Admin
     match /cases/{allPaths=**} {
       allow read: if isAuthenticated();
-      allow write: if isAdmin();
+      allow write: if isAdmin() || isSuperAdmin();
     }
     
     // 3. Modules (New Structure if used)
     match /modules/{allPaths=**} {
       allow read: if isAuthenticated();
-      allow write: if isAdmin();
+      allow write: if isAdmin() || isSuperAdmin();
     }
 
     // 4. User Avatars

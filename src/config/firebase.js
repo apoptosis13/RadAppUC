@@ -24,4 +24,4 @@ export const db = initializeFirestore(app, {
     experimentalForceLongPolling: true,
 });
 export const storage = getStorage(app);
-export const functions = getFunctions(app);
+export const functions = getFunctions(app, "us-central1");

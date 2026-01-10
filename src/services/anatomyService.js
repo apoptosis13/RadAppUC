@@ -26,7 +26,8 @@ export const anatomyService = {
             return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         } catch (error) {
             console.error("Error getting anatomy modules:", error);
-            throw error;
+            // Return empty array instead of throwing to prevent breaking Promise.all in dashboard
+            return [];
         }
     },
 

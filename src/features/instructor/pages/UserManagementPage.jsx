@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Plus, Edit, Trash2, X, Check, XCircle, Ban, PlayCircle, Crown } from 'lucide-react';
+import { Plus, Edit, Trash2, X, Check, XCircle, Ban, PlayCircle, Crown, ArrowRightLeft } from 'lucide-react';
 import { authService } from '../../../services/authService';
 import { auth } from '../../../config/firebase';
 import { onAuthStateChanged } from 'firebase/auth';
@@ -82,6 +82,17 @@ const UserManagementPage = () => {
         }
     };
 
+    const handleMigrateUser = async (email, uid) => {
+        if (window.confirm(`¿Confirmas la migración del usuario ${email} al nuevo sistema UID? El registro antiguo será eliminado.`)) {
+            try {
+                await authService.migrateUser(email, uid);
+                loadUsers();
+            } catch (err) {
+                setError(err.message || 'Failed to migrate user');
+            }
+        }
+    };
+
     return (
         <div className="space-y-6">
             <div className="flex justify-between items-center">
@@ -133,26 +144,26 @@ const UserManagementPage = () => {
                                 <tr key={user.id}>
                                     <td className="px-6 py-4 whitespace-nowrap">
                                         <div className="flex items-center">
-                                            <div className="h-8 w-8 rounded-full overflow-hidden bg-gray-100 relative">
-                                                {user.photoURL ? (
-                                                    <img src={user.photoURL} alt="" className="h-full w-full object-cover" />
-                                                ) : (
-                                                    <div className="h-full w-full flex items-center justify-center text-gray-400 font-bold">
-                                                        {user.displayName?.charAt(0)}
+                                            <div className="h-8 w-8 relative flex-shrink-0">
+                                                <div className="h-full w-full rounded-full overflow-hidden bg-gray-100">
+                                                    {user.photoURL ? (
+                                                        <img src={user.photoURL} alt="" className="h-full w-full object-cover" />
+                                                    ) : (
+                                                        <div className="h-full w-full flex items-center justify-center text-gray-400 font-bold text-xs">
+                                                            {user.displayName?.charAt(0)}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                                {/* Crown Badge */}
+                                                {user.email === SUPER_ADMIN_EMAIL ? (
+                                                    <div className="absolute -bottom-0.5 -right-0.5 bg-white rounded-full p-0.5 shadow-md z-10" title="Super Admin">
+                                                        <Crown className="w-2.5 h-2.5 text-yellow-500 fill-yellow-500" />
                                                     </div>
-                                                )}
-                                            </div>
-                                            <div className="relative -ml-3 -mt-3">
-                                                {user.email === 'gonzalodiazs@gmail.com' && (
-                                                    <div className="absolute top-0 right-0 bg-white rounded-full p-0.5 shadow-sm z-10" title="Super Admin">
-                                                        <Crown className="w-3 h-3 text-yellow-500 fill-yellow-500" />
+                                                ) : (user.role === 'admin' || user.role === 'instructor') ? (
+                                                    <div className="absolute -bottom-0.5 -right-0.5 bg-white rounded-full p-0.5 shadow-md z-10" title="Instructor">
+                                                        <Crown className="w-2.5 h-2.5 text-slate-400 fill-slate-400" />
                                                     </div>
-                                                )}
-                                                {user.email !== 'gonzalodiazs@gmail.com' && (user.role === 'admin' || user.role === 'instructor') && (
-                                                    <div className="absolute top-0 right-0 bg-white rounded-full p-0.5 shadow-sm z-10" title="Instructor">
-                                                        <Crown className="w-3 h-3 text-slate-400 fill-slate-400" />
-                                                    </div>
-                                                )}
+                                                ) : null}
                                             </div>
                                             <div className="ml-3">
                                                 <div className="text-sm font-medium text-gray-900">{user.displayName}</div>
@@ -163,17 +174,6 @@ const UserManagementPage = () => {
                                         <div className="flex flex-col">
                                             <div className="text-sm text-gray-500 font-medium">
                                                 {isTargetSuperAdmin ? 'Administrador' : user.email}
-                                            </div>
-                                            <div className="flex items-center space-x-2 mt-1">
-                                                <span className={`text-[10px] px-1.5 py-0.5 rounded border leading-none font-bold uppercase tracking-wider ${user.id?.includes('@')
-                                                    ? 'bg-amber-50 text-amber-600 border-amber-200'
-                                                    : 'bg-indigo-50 text-indigo-600 border-indigo-200'
-                                                    }`}>
-                                                    {user.id?.includes('@') ? 'Legacy' : 'UID'}
-                                                </span>
-                                                <code className="text-[10px] text-gray-400 font-mono">
-                                                    #{user.id?.substring(user.id.length - 6)}
-                                                </code>
                                             </div>
                                         </div>
                                     </td>
@@ -259,6 +259,16 @@ const UserManagementPage = () => {
                                                             title="Reactivar"
                                                         >
                                                             <PlayCircle className="w-5 h-5" />
+                                                        </button>
+                                                    )}
+
+                                                    {isSuperAdmin && user.id.includes('@') && user.uid && (
+                                                        <button
+                                                            onClick={() => handleMigrateUser(user.id, user.uid)}
+                                                            className="text-blue-500 hover:text-blue-700"
+                                                            title="Migrar a UID (Best Practice)"
+                                                        >
+                                                            <ArrowRightLeft className="w-5 h-5" />
                                                         </button>
                                                     )}
 

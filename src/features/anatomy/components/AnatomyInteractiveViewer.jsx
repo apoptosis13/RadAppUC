@@ -142,7 +142,11 @@ const AnatomyInteractiveViewer = ({ module, className, onBack }) => {
             // This preserves Zoom/Pan when just scrolling through slices.
             if (hasSeriesChanged) {
                 setViewport({ cx: nw / 2, cy: nh / 2, scale: 1 });
-                setAdjustments(p => ({ ...p, rotate: 0, flipH: false }));
+                setAdjustments(p => ({
+                    ...p,
+                    rotate: activeSeries.rotate || 0,
+                    flipH: activeSeries.flipH || false
+                }));
             }
         };
     }, [currentImageUrl, activeSeriesId]);

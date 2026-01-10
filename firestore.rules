@@ -32,8 +32,10 @@ service cloud.firestore {
       // Authenticated users can read valid profiles (needed for UI)
       allow read: if isAuthenticated();
       
-      // Creation: Only allow if the auth matches the doc ID (Self-registration)
-      allow create: if isAuthenticated() && (request.auth.uid == userId || request.auth.token.email == userId);
+      // Creation: 
+      // 1. Only allow if the auth matches the doc ID (Self-registration)
+      // 2. Or if the user is the Super Admin (Manual migration/addition)
+      allow create: if isAuthenticated() && (request.auth.uid == userId || request.auth.token.email == userId || isSuperAdmin());
       
       // Updates: 
       // 1. User can update their own non-sensitive fields
@@ -66,7 +68,7 @@ service cloud.firestore {
       allow create: if isAuthenticated() && request.resource.data.email == request.auth.token.email;
       
       // Only Admins can view logs
-      allow read: if isAdmin();
+      allow read: if isAdmin() || isSuperAdmin();
       
       // No one can modify or delete logs (Immutable)
       allow update, delete: if false;

@@ -58,6 +58,27 @@ const AnatomyEditor = ({ series, onUpdate, onReverseOrder, onImageIndexChange })
     const [isTranslating, setIsTranslating] = useState(false);
     const [showManagement, setShowManagement] = useState(false); // Legacy sidebar toggle
 
+    // Sync adjustments when series changes
+    useEffect(() => {
+        setAdjustments(prev => ({
+            ...prev,
+            rotate: series.rotate || 0,
+            flipH: series.flipH || false
+        }));
+    }, [series.id]);
+
+    // Handle updates to the parent
+    const updateRotation = (newRotate) => {
+        setAdjustments(p => ({ ...p, rotate: newRotate }));
+        onUpdate({ rotate: newRotate });
+    };
+
+    const toggleFlipH = () => {
+        const newFlipH = !adjustments.flipH;
+        setAdjustments(p => ({ ...p, flipH: newFlipH }));
+        onUpdate({ flipH: newFlipH });
+    };
+
     // Magnet Mode State
     const [magnetActive, setMagnetActive] = useState(false);
     const offscreenCanvasRef = useRef(null);
@@ -766,10 +787,10 @@ const AnatomyEditor = ({ series, onUpdate, onReverseOrder, onImageIndexChange })
 
                     <div className="w-px h-6 bg-gray-700 mx-2" />
 
-                    <button onClick={() => setAdjustments(p => ({ ...p, rotate: (p.rotate + 90) % 360 }))} className="p-2 rounded text-gray-400 hover:bg-gray-700" title="Rotar 90°">
+                    <button onClick={() => updateRotation((adjustments.rotate + 90) % 360)} className="p-2 rounded text-gray-400 hover:bg-gray-700" title="Rotar 90°">
                         <RotateCw className="w-5 h-5" />
                     </button>
-                    <button onClick={() => setAdjustments(p => ({ ...p, flipH: !p.flipH }))} className="p-2 rounded text-gray-400 hover:bg-gray-700" title="Voltear Horizontalmente">
+                    <button onClick={toggleFlipH} className="p-2 rounded text-gray-400 hover:bg-gray-700" title="Voltear Horizontalmente">
                         <FlipHorizontal className="w-5 h-5" />
                     </button>
                     {onReverseOrder && (

@@ -21,15 +21,32 @@ export const authService = {
             let userSnap = await getDoc(doc(db, 'users', user.uid));
             let userRef = doc(db, 'users', user.uid);
             let isLegacy = false;
+            let wasMigrated = false;
 
-            // 2. If not found, try by Email (legacy way)
+            // 2. If not found by UID, try by Email (legacy way)
             if (!userSnap.exists()) {
                 const emailRef = doc(db, 'users', user.email);
                 const emailSnap = await getDoc(emailRef);
+
                 if (emailSnap.exists()) {
-                    userSnap = emailSnap;
-                    userRef = emailRef;
-                    isLegacy = true;
+                    // LAZY MIGRATION: Move data to UID doc and delete old one
+                    const legacyData = emailSnap.data();
+                    const newData = { ...legacyData, uid: user.uid };
+
+                    await setDoc(doc(db, 'users', user.uid), newData);
+                    await deleteDoc(emailRef);
+
+                    // Now read it back from the new location
+                    userSnap = await getDoc(doc(db, 'users', user.uid));
+                    userRef = doc(db, 'users', user.uid);
+                    wasMigrated = true;
+                }
+            } else {
+                // Check if there's a residual legacy doc and delete it if so
+                const emailRef = doc(db, 'users', user.email);
+                const emailSnap = await getDoc(emailRef);
+                if (emailSnap.exists()) {
+                    await deleteDoc(emailRef);
                 }
             }
 
@@ -48,7 +65,7 @@ export const authService = {
                     status: isSuperAdmin ? 'approved' : 'pending',
                     createdAt: new Date().toISOString()
                 };
-                userRef = doc(db, 'users', user.uid); // Ensure we use UID for new docs
+                userRef = doc(db, 'users', user.uid);
                 await setDoc(userRef, dbUser);
             } else {
                 // Update existing user info
@@ -64,7 +81,7 @@ export const authService = {
                     const updates = {
                         displayName: user.displayName,
                         photoURL: user.photoURL,
-                        uid: user.uid // Ensure UID is stored even in legacy docs
+                        uid: user.uid
                     };
                     await updateDoc(userRef, updates);
                     dbUser = { ...dbUser, ...updates };
@@ -77,7 +94,7 @@ export const authService = {
                 await activityLogService.logActivity('LOGIN', {
                     method: 'google',
                     email: user.email,
-                    isLegacy
+                    migrated: wasMigrated
                 });
             } catch (e) {
                 console.error('Failed to log login:', e);
@@ -88,6 +105,33 @@ export const authService = {
             console.error("Google Sign-In Error:", error);
             throw error;
         }
+    },
+
+    migrateUser: async (email, uid) => {
+        if (!email || !uid) throw new Error("Email y UID son requeridos para migración");
+
+        const legacyRef = doc(db, 'users', email);
+        const legacySnap = await getDoc(legacyRef);
+
+        if (!legacySnap.exists()) {
+            throw new Error("El documento legacy no existe");
+        }
+
+        const data = legacySnap.data();
+        const newRef = doc(db, 'users', uid);
+        const newSnap = await getDoc(newRef);
+
+        // If UID doc exists, we just delete the legacy one (it was already migrated or new one is fresher)
+        if (newSnap.exists()) {
+            await deleteDoc(legacyRef);
+            return { id: uid, ...newSnap.data() };
+        }
+
+        // Copy and Move
+        await setDoc(newRef, { ...data, uid });
+        await deleteDoc(legacyRef);
+
+        return { id: uid, ...data, uid };
     },
 
     logout: async () => {
