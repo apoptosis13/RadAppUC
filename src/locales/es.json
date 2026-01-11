@@ -7,9 +7,9 @@
     "profile": "Mi Perfil"
   },
   "home": {
-    "title": "Portal Radiología Musculoesquelética",
+    "title": "VoxelHub",
     "subtitle": "Pontificia Universidad Católica de Chile",
-    "description": "Estudio interactivo de radiología musculoesquelética para residentes.",
+    "description": "Portal interactivo de estudio de radiología musculoesquelética para residentes.",
     "startPracticing": "Empezar a Practicar",
     "exploreAnatomy": "Explorar Anatomía",
     "features": {

@@ -7,7 +7,7 @@ import { getFunctions } from "firebase/functions";
 // Your web app's Firebase configuration
 const firebaseConfig = {
     apiKey: "AIzaSyCaY6ZBpynZfSBczGgvItejsoIUUysHhTU",
-    authDomain: "radiology-app-v2.firebaseapp.com",
+    authDomain: "voxelhub.cl",
     projectId: "radiology-app-v2",
     storageBucket: "radiology-app-v2.firebasestorage.app",
     messagingSenderId: "912001376646",

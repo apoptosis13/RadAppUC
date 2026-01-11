@@ -7,9 +7,9 @@
         "profile": "My Profile"
     },
     "home": {
-        "title": "Musculoskeletal Radiology Portal",
+        "title": "VoxelHub",
         "subtitle": "Pontificia Universidad Católica de Chile",
-        "description": "Interactive musculoskeletal radiology study for residents.",
+        "description": "Interactive musculoskeletal radiology study portal for residents.",
         "startPracticing": "Start Practicing",
         "exploreAnatomy": "Explore Anatomy",
         "features": {

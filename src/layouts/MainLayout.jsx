@@ -40,8 +40,8 @@ const MainLayout = () => {
                     <div className="flex justify-between h-16">
                         <div className="flex">
                             <div className="flex-shrink-0 flex items-center">
-                                <img className="h-10 w-auto mr-3" src="/logo.png" alt="Radiología UC Logo" />
-                                <span className="text-xl font-bold text-indigo-600 dark:text-indigo-400">Radiología UC</span>
+                                <img className="h-10 w-auto mr-3" src="/voxelhub-logo.png" alt="VoxelHub Logo" />
+                                <span className="text-xl font-bold text-indigo-600 dark:text-indigo-400">VoxelHub</span>
                             </div>
                             <div className="hidden sm:ml-6 sm:flex sm:space-x-8">
                                 {navItems.map((item) => {
@@ -264,7 +264,7 @@ const MainLayout = () => {
                 <div className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
                     <div className="flex justify-between items-center">
                         <p className="text-sm text-gray-500 dark:text-gray-400">
-                            &copy; {new Date().getFullYear()} Radiología UC. {t('home.footer.rights')}
+                            &copy; {new Date().getFullYear()} VoxelHub. {t('home.footer.rights')}
                         </p>
                         <div className="flex space-x-6">
                             {user && user.role === 'admin' && (

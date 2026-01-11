@@ -1,6 +1,6 @@
 {
     "name": "functions",
-    "description": "Cloud Functions for Radiology Training App",
+    "description": "Cloud Functions for VoxelHub",
     "scripts": {
         "serve": "firebase emulators:start --only functions",
         "shell": "firebase functions:shell",

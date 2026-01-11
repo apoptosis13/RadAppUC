@@ -191,7 +191,7 @@ exports.notifyRoleRequest = functions.firestore
             }
 
             const mailOptions = {
-                from: `"Radiology App" <${gmailEmail}>`,
+                from: `"VoxelHub" <${gmailEmail}>`,
                 to: gmailEmail, // Sending to admin
                 subject: `Nueva solicitud de rol: ${newData.displayName}`,
                 html: `
@@ -234,7 +234,7 @@ exports.notifyUserStatusChange = functions.firestore
             if (newData.status === 'approved') {
                 subject = "🎉 ¡Bienvenido! Tu cuenta ha sido aprobada";
                 htmlContent = `
-                    <h2>¡Bienvenido a Radiology Training App!</h2>
+                    <h2>¡Bienvenido a VoxelHub!</h2>
                     <p>Hola <strong>${newData.displayName}</strong>,</p>
                     <p>Nos complace informarte que tu solicitud de acceso ha sido <strong>APROBADA</strong>.</p>
                     <p>Ya puedes iniciar sesión en la plataforma con tu cuenta de Google.</p>
@@ -254,7 +254,7 @@ exports.notifyUserStatusChange = functions.firestore
             }
 
             const mailOptions = {
-                from: `"Administrador App Radiología UC" <${gmailEmail}>`,
+                from: `"Administrador VoxelHub" <${gmailEmail}>`,
                 to: newData.email,
                 subject: subject,
                 html: htmlContent,
