@@ -14,7 +14,6 @@ const CreateCasePage = () => {
         history: '',
         images: [],
         correctDiagnosis: '',
-        findings: '',
         englishDiagnosis: '',
         caseComments: '',
         questions: [
@@ -297,18 +296,6 @@ const CreateCasePage = () => {
                         <p className="mt-1 text-xs text-gray-500">
                             Si se deja vacío, se usará el diagnóstico principal (o su traducción automática si es un caso original).
                         </p>
-                    </div>
-
-                    <div className="col-span-2">
-                        <label htmlFor="findings" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Key Findings (for reference)</label>
-                        <textarea
-                            name="findings"
-                            id="findings"
-                            rows={2}
-                            value={formData.findings}
-                            onChange={handleChange}
-                            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-                        />
                     </div>
 
                     <div className="col-span-2">

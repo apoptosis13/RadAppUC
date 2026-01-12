@@ -21,10 +21,16 @@ const HomePage = () => {
                     <div className="absolute inset-0 bg-gray-900 opacity-70"></div>
                 </div>
                 <div className="relative max-w-7xl mx-auto py-24 px-4 sm:py-32 sm:px-6 lg:px-8">
-                    <h1 className="text-4xl tracking-tight font-extrabold text-white sm:text-5xl md:text-6xl text-center">
-                        <span className="block">{t('home.title')}</span>
-                        <span className="block text-indigo-400 mt-2">{t('home.subtitle')}</span>
-                    </h1>
+                    <div className="flex flex-col items-center">
+                        <img
+                            src="/voxelhub-logo-full.png"
+                            alt="VoxelHub Logo"
+                            className="h-32 md:h-48 w-auto mb-6 drop-shadow-2xl transform hover:scale-105 transition-transform duration-500"
+                        />
+                        <h1 className="text-4xl tracking-tight font-extrabold text-white sm:text-5xl md:text-6xl text-center">
+                            <span className="block text-indigo-400 mt-2">{t('home.subtitle')}</span>
+                        </h1>
+                    </div>
                     <p className="mt-6 max-w-3xl mx-auto text-xl text-gray-300 text-center">
                         {t('home.description')}
                     </p>

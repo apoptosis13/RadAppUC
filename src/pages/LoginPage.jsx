@@ -223,7 +223,7 @@ const LoginPage = () => {
                 <div className="flex flex-col items-center">
                     {/* Custom Logo */}
                     <img
-                        src="/voxelhub-logo.png"
+                        src="/voxelhub-logo-full.png"
                         alt="VoxelHub Logo"
                         className="h-32 w-auto mb-6 drop-shadow-xl transform hover:scale-105 transition-transform duration-300"
                     />

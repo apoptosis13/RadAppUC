@@ -7,6 +7,7 @@ import { User, Save, Camera, Upload, Check, Moon, Sun, Globe, Monitor, X, ZoomIn
 import Cropper from 'react-easy-crop';
 import getCroppedImg from '../utils/canvasUtils';
 import { AVATAR_PRESETS } from '../utils/userConstants';
+import UserAvatar from '../components/UserAvatar';
 
 const ProfilePage = () => {
     const { user, updateProfile } = useAuth();
@@ -142,15 +143,12 @@ const ProfilePage = () => {
                     {/* Left Column: Avatar */}
                     <div className="flex-shrink-0 mb-6 md:mb-0 md:w-1/3 flex flex-col items-center">
                         <div className="relative group">
-                            <div className="w-40 h-40 rounded-full overflow-hidden border-4 border-gray-100 dark:border-gray-700 shadow-md">
-                                <img
-                                    src={formData.photoURL || `https://ui-avatars.com/api/?name=${formData.displayName || 'User'}&background=random`}
-                                    alt="Profile"
-                                    className="w-full h-full object-cover"
-                                    onError={(e) => {
-                                        e.target.onerror = null; // Prevent loop
-                                        e.target.src = `https://ui-avatars.com/api/?name=${formData.displayName || 'User'}&background=random`;
-                                    }}
+                            <div className="w-40 h-40">
+                                <UserAvatar
+                                    src={formData.photoURL}
+                                    name={formData.displayName}
+                                    size="xl"
+                                    className="w-full h-full border-4 border-gray-100 dark:border-gray-700 shadow-md"
                                 />
                             </div>
                             <button

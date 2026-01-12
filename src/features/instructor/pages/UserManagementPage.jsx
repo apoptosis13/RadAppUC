@@ -5,6 +5,7 @@ import { authService } from '../../../services/authService';
 import { auth } from '../../../config/firebase';
 import { onAuthStateChanged } from 'firebase/auth';
 
+import UserAvatar from '../../../components/UserAvatar';
 import UserActivityModal from '../components/UserActivityModal';
 
 const SUPER_ADMIN_EMAIL = 'gonzalodiazs@gmail.com';
@@ -144,16 +145,12 @@ const UserManagementPage = () => {
                                 <tr key={user.id}>
                                     <td className="px-6 py-4 whitespace-nowrap">
                                         <div className="flex items-center">
-                                            <div className="h-8 w-8 relative flex-shrink-0">
-                                                <div className="h-full w-full rounded-full overflow-hidden bg-gray-100">
-                                                    {user.photoURL ? (
-                                                        <img src={user.photoURL} alt="" className="h-full w-full object-cover" />
-                                                    ) : (
-                                                        <div className="h-full w-full flex items-center justify-center text-gray-400 font-bold text-xs">
-                                                            {user.displayName?.charAt(0)}
-                                                        </div>
-                                                    )}
-                                                </div>
+                                            <div className="relative">
+                                                <UserAvatar
+                                                    src={user.photoURL}
+                                                    name={user.displayName}
+                                                    size="sm"
+                                                />
                                                 {/* Crown Badge */}
                                                 {user.email === SUPER_ADMIN_EMAIL ? (
                                                     <div className="absolute -bottom-0.5 -right-0.5 bg-white rounded-full p-0.5 shadow-md z-10" title="Super Admin">
@@ -166,7 +163,7 @@ const UserManagementPage = () => {
                                                 ) : null}
                                             </div>
                                             <div className="ml-3">
-                                                <div className="text-sm font-medium text-gray-900">{user.displayName}</div>
+                                                <div className="text-sm font-medium text-gray-900 font-outfit">{user.displayName}</div>
                                             </div>
                                         </div>
                                     </td>

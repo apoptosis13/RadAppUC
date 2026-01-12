@@ -8,7 +8,7 @@
   },
   "home": {
     "title": "VoxelHub",
-    "subtitle": "Pontificia Universidad Católica de Chile",
+    "subtitle": "Conecta. Visualiza. Aprende.",
     "description": "Portal interactivo de estudio de radiología musculoesquelética para residentes.",
     "startPracticing": "Empezar a Practicar",
     "exploreAnatomy": "Explorar Anatomía",
@@ -138,26 +138,21 @@
       "case1": {
         "title": "Dolor Agudo de Rodilla",
         "history": "Varón de 25 años, jugador de fútbol, con lesión por torsión.",
-        "correctDiagnosis": "Desgarro del LCA",
-        "findings": "Disrupción completa de las fibras del ligamento cruzado anterior con edema circundante."
+        "correctDiagnosis": "Desgarro del LCA"
       },
       "case2": {
         "title": "Tos Persistente",
         "history": "Mujer de 45 años con 3 semanas de tos productiva y fiebre.",
-        "correctDiagnosis": "Neumonía del Lóbulo Inferior Derecho",
-        "findings": "Opacificación en el campo pulmonar inferior derecho consistente con consolidación."
+        "correctDiagnosis": "Neumonía del Lóbulo Inferior Derecho"
       },
       "case3": {
         "title": "Cefalea Severa",
         "history": "Varón de 60 años con cefalea súbita en 'trueno'.",
-        "correctDiagnosis": "Hemorragia Subaracnoidea",
-        "findings": "Material hiperdenso dentro de los espacios subaracnoideos, particularmente en las cisternas basales."
+        "correctDiagnosis": "Hemorragia Subaracnoidea"
       }
     },
     "diagnosis": {
       "title": "Enviar Diagnóstico",
-      "keyFindings": "Hallazgos Clave",
-      "findingsPlaceholder": "Describa lo que ve...",
       "primaryDiagnosis": "Diagnóstico Principal",
       "diagnosisPlaceholder": "Ingrese su diagnóstico",
       "submit": "Enviar Diagnóstico",

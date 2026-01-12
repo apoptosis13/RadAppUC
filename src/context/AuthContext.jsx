@@ -12,7 +12,18 @@ export const AuthProvider = ({ children }) => {
     const SESSION_TIMEOUT_MS = 72 * 60 * 60 * 1000; // 72 hours
 
     useEffect(() => {
+        console.log('AuthProvider initialized, waiting for onAuthStateChanged...');
+
+        // Safety timeout in case Firebase is unreachable
+        const safetyTimeout = setTimeout(() => {
+            if (loading) {
+                console.error("Auth timeout: Firebase didn't respond in time.");
+                setLoading(false);
+            }
+        }, 5000);
+
         const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+            clearTimeout(safetyTimeout);
             if (firebaseUser) {
                 // Check session timeout
                 const lastActivity = localStorage.getItem('lastActivity');
@@ -121,7 +132,16 @@ export const AuthProvider = ({ children }) => {
 
     return (
         <AuthContext.Provider value={{ user, login, logout, requestRole, updateProfile, loading }}>
-            {!loading && children}
+            {loading ? (
+                <div className="min-h-screen flex items-center justify-center bg-gray-900">
+                    <div className="text-center">
+                        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-500 mx-auto mb-4"></div>
+                        <p className="text-gray-400">Iniciando VoxelHub...</p>
+                    </div>
+                </div>
+            ) : (
+                children
+            )}
         </AuthContext.Provider>
     );
 };

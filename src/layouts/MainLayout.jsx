@@ -4,6 +4,7 @@ import { Layout, BookOpen, FileText, Menu, User, LogOut, Settings, Sun, Moon, Cr
 import clsx from 'clsx';
 import { useTranslation } from 'react-i18next';
 import LanguageSwitcher from '../components/LanguageSwitcher';
+import UserAvatar from '../components/UserAvatar';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 
@@ -40,8 +41,7 @@ const MainLayout = () => {
                     <div className="flex justify-between h-16">
                         <div className="flex">
                             <div className="flex-shrink-0 flex items-center">
-                                <img className="h-10 w-auto mr-3" src="/voxelhub-logo.png" alt="VoxelHub Logo" />
-                                <span className="text-xl font-bold text-indigo-600 dark:text-indigo-400">VoxelHub</span>
+                                <img className="h-10 w-auto" src="/voxelhub-logo-full.png" alt="VoxelHub Logo" />
                             </div>
                             <div className="hidden sm:ml-6 sm:flex sm:space-x-8">
                                 {navItems.map((item) => {
@@ -84,19 +84,11 @@ const MainLayout = () => {
                                         >
                                             <span className="sr-only">Open user menu</span>
                                             <div className="relative">
-                                                {user.photoURL ? (
-                                                    <img
-                                                        className="h-8 w-8 rounded-full object-cover border border-gray-200 dark:border-gray-600"
-                                                        src={user.photoURL}
-                                                        alt={user.displayName || user.name}
-                                                    />
-                                                ) : (
-                                                    <div className="h-8 w-8 rounded-full bg-indigo-100 dark:bg-indigo-900 flex items-center justify-center text-indigo-600 dark:text-indigo-300">
-                                                        <span className="font-medium text-sm">
-                                                            {(user.displayName || user.name || user.email || 'U').charAt(0).toUpperCase()}
-                                                        </span>
-                                                    </div>
-                                                )}
+                                                <UserAvatar
+                                                    src={user.photoURL}
+                                                    name={user.displayName || user.name}
+                                                    size="sm"
+                                                />
 
                                                 {/* Role Badge */}
                                                 {user.email === 'gonzalodiazs@gmail.com' && (
@@ -206,9 +198,11 @@ const MainLayout = () => {
                                 <div className="space-y-1">
                                     <div className="flex items-center px-4 mb-3">
                                         <div className="flex-shrink-0">
-                                            <div className="h-10 w-10 rounded-full bg-indigo-100 dark:bg-indigo-900 flex items-center justify-center text-indigo-600 dark:text-indigo-300">
-                                                <User className="h-6 w-6" />
-                                            </div>
+                                            <UserAvatar
+                                                src={user.photoURL}
+                                                name={user.name || user.displayName}
+                                                size="md"
+                                            />
                                         </div>
                                         <div className="ml-3">
                                             <div className="text-base font-medium text-gray-800 dark:text-white">{user.name}</div>

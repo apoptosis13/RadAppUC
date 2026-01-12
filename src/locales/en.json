@@ -8,7 +8,7 @@
     },
     "home": {
         "title": "VoxelHub",
-        "subtitle": "Pontificia Universidad Católica de Chile",
+        "subtitle": "Connect. Visualize. Learn.",
         "description": "Interactive musculoskeletal radiology study portal for residents.",
         "startPracticing": "Start Practicing",
         "exploreAnatomy": "Explore Anatomy",
@@ -138,26 +138,21 @@
             "case1": {
                 "title": "Acute Knee Pain",
                 "history": "25-year-old male soccer player with twisting injury.",
-                "correctDiagnosis": "ACL Tear",
-                "findings": "Complete disruption of the anterior cruciate ligament fibers with surrounding edema."
+                "correctDiagnosis": "ACL Tear"
             },
             "case2": {
                 "title": "Persistent Cough",
                 "history": "45-year-old female with 3 weeks of productive cough and fever.",
-                "correctDiagnosis": "Right Lower Lobe Pneumonia",
-                "findings": "Opacification in the right lower lung field consistent with consolidation."
+                "correctDiagnosis": "Right Lower Lobe Pneumonia"
             },
             "case3": {
                 "title": "Severe Headache",
                 "history": "60-year-old male with sudden onset \"thunderclap\" headache.",
-                "correctDiagnosis": "Subarachnoid Hemorrhage",
-                "findings": "Hyperdense material within the subarachnoid spaces, particularly in the basal cisterns."
+                "correctDiagnosis": "Subarachnoid Hemorrhage"
             }
         },
         "diagnosis": {
             "title": "Submit Diagnosis",
-            "keyFindings": "Key Findings",
-            "findingsPlaceholder": "Describe what you see...",
             "primaryDiagnosis": "Primary Diagnosis",
             "diagnosisPlaceholder": "Enter your diagnosis",
             "submit": "Submit Diagnosis",
