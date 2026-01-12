@@ -270,6 +270,101 @@ exports.notifyUserStatusChange = functions.firestore
         return null;
     });
 
+exports.deleteUser = functions.https.onCall(async (data, context) => {
+    if (!context.auth) {
+        throw new functions.https.HttpsError('unauthenticated', 'Debe estar autenticado.');
+    }
+
+    const targetUserId = data.userId;
+    const callerUid = context.auth.uid;
+    const callerEmail = context.auth.token.email.toLowerCase();
+    const SUPER_ADMIN_EMAIL = 'gonzalodiazs@gmail.com';
+
+    if (!targetUserId) {
+        throw new functions.https.HttpsError('invalid-argument', 'Falta el ID del usuario a eliminar.');
+    }
+
+    try {
+        // 1. Get Caller Info
+        const callerRef = admin.firestore().collection('users').doc(callerUid);
+        const callerSnap = await callerRef.get();
+
+        // If caller doc not found by UID, try by Email (legacy)
+        let callerData = callerSnap.exists ? callerSnap.data() : null;
+        if (!callerData) {
+            const callerEmailRef = admin.firestore().collection('users').doc(callerEmail);
+            const callerEmailSnap = await callerEmailRef.get();
+            if (callerEmailSnap.exists) callerData = callerEmailSnap.data();
+        }
+
+        const isSuperAdmin = callerEmail === SUPER_ADMIN_EMAIL;
+        const isCallerAdmin = callerData && (callerData.role === 'admin' || callerData.role === 'instructor');
+
+        if (!isSuperAdmin && !isCallerAdmin) {
+            throw new functions.https.HttpsError('permission-denied', 'No tiene permisos para eliminar usuarios.');
+        }
+
+        // 2. Get Target Info
+        const targetRef = admin.firestore().collection('users').doc(targetUserId);
+        let targetSnap = await targetRef.get();
+        // Try legacy lookup if needed
+        if (!targetSnap.exists) {
+            // Maybe targetUserId IS an email (legacy ID)
+            const targetEmailRef = admin.firestore().collection('users').doc(targetUserId);
+            targetSnap = await targetEmailRef.get();
+        }
+
+        if (!targetSnap.exists) {
+            // Document doesn't exist, maybe already deleted from Authentication?
+            // Just try to delete from Auth to be sure
+            try {
+                await admin.auth().deleteUser(targetUserId);
+            } catch (e) { /* ignore */ }
+            return { success: true, message: "Usuario no encontrado en base de datos, limpiado." };
+        }
+
+        const targetData = targetSnap.data();
+        const targetEmail = targetData.email ? targetData.email.toLowerCase() : '';
+        const targetRole = targetData.role || 'guest';
+
+        // 3. Hierarchy Check
+
+        // Rule: Super Admin cannot be deleted
+        if (targetEmail === SUPER_ADMIN_EMAIL) {
+            throw new functions.https.HttpsError('permission-denied', 'No se puede eliminar al Super Administrador.');
+        }
+
+        // Rule: Instructors cannot delete other Instructors/Admins (Only Super Admin can)
+        if (!isSuperAdmin && (targetRole === 'admin' || targetRole === 'instructor')) {
+            throw new functions.https.HttpsError('permission-denied', 'Los instructores solo pueden eliminar alumnos o invitados.');
+        }
+
+        // 4. Perform Deletion
+
+        // A. Delete from Firestore
+        await targetSnap.ref.delete();
+
+        // B. Delete from Authentication (if UID is valid)
+        // If the doc ID is not the UID, look for UID field
+        const targetUid = targetData.uid || (targetSnap.id.includes('@') ? null : targetSnap.id);
+
+        if (targetUid) {
+            try {
+                await admin.auth().deleteUser(targetUid);
+            } catch (authError) {
+                console.warn(`Could not delete auth user ${targetUid}:`, authError);
+                // Continue, as firestore doc is deleted
+            }
+        }
+
+        return { success: true };
+
+    } catch (error) {
+        console.error("Delete User Error:", error);
+        throw new functions.https.HttpsError('internal', error.message);
+    }
+});
+
 // --- DEBUG & CONNECTIVITY ---
 exports.pingAI = functions.https.onCall((data, context) => {
     return { status: "ok", message: "AI function is reachable", timestamp: new Date().toISOString() };

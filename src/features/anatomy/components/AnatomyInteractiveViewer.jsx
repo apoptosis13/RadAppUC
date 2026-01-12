@@ -378,7 +378,9 @@ const AnatomyInteractiveViewer = ({ module, className, onBack }) => {
         const visibleAnnotations = annotations.filter(ann => visibleCategories[ann.category]);
 
         // Responsive Font Size Calculation
-        const fontSize = Math.max(12, Math.min(16, containerSize.width / 80)); // Smaller font
+        const densityFactor = visibleAnnotations.length > 20 ? 80 : 50;
+        // Clamp between 12px and 24px, primarily driven by container width / density
+        const fontSize = Math.max(12, Math.min(24, containerSize.width / densityFactor));
         const lineHeight = fontSize * 1.5;
 
         // 1. Calculate Screen Positions for ALL items

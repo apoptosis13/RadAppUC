@@ -13,6 +13,28 @@ const AboutPage = () => {
 
     const VERSIONS = [
         {
+            version: '1.0.0-beta.5',
+            date: '2026-01-11',
+            title: 'Refinamiento de UI y Tipografía',
+            changes: [
+                'Nueva tipografía moderna (Inter) en toda la plataforma',
+                'Atlas Anatómico: Escala de texto inteligente dinámica',
+                'Me Mejoras de legibilidad en etiquetas y paneles'
+            ]
+        },
+        {
+            version: '1.0.0-beta.4',
+            date: '2026-01-11',
+            title: 'Optimización y Estabilidad',
+            changes: [
+                'Rebranding oficial a VoxelHub (Nueva identidad visual)',
+                'Solución crítica de error de inicio (Crash Loop)',
+                'Nuevo Sistema de Avatares (Soporte de iniciales y fallback)',
+                'Simplificación de flujo de casos (Eliminación de Hallazgos)',
+                'Optimización de rendimiento (Carga diferida de imágenes)'
+            ]
+        },
+        {
             version: '1.0.0-beta.3',
             date: '2026-01-04',
             title: 'Consolidación del Visor y Seguridad',

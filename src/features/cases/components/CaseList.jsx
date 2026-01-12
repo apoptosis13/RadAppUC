@@ -74,7 +74,9 @@ const CaseList = () => {
                                 <img
                                     src={caseItem.images && caseItem.images.length > 0 ? caseItem.images[0] : caseItem.image}
                                     alt={caseItem.title}
-                                    className="w-full h-full object-cover"
+                                    className="w-full h-full object-cover transition-opacity duration-300 ease-in-out"
+                                    loading="lazy"
+                                    decoding="async"
                                 />
                                 <div className="absolute top-2 right-2 bg-black/70 text-white px-2 py-1 rounded text-xs font-medium">
                                     {t(`cases.modality.${caseItem.modality}`)}

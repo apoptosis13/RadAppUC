@@ -16,6 +16,7 @@ const UserManagementPage = () => {
     const [users, setUsers] = useState([]);
     const [error, setError] = useState('');
     const [selectedUser, setSelectedUser] = useState(null);
+    const [userToDelete, setUserToDelete] = useState(null);
 
     // Manual reactivity
     useEffect(() => {
@@ -26,9 +27,13 @@ const UserManagementPage = () => {
     }, []);
 
     // Check if current user is admin (Instructor)
-    const isAdmin = currentUser?.role === 'admin';
-    // Keep Super Admin distinction for critical actions if needed (like deleting other admins)
+    // We need to look up the role from the loaded users list or use a separate state if users aren't loaded yet.
+    // Ideally, we'd have a useUserProfile hook, but here we can find it in 'users' or assume specific context.
+    // For now, let's derive it from the 'users' array if available, or default to false until loaded.
+    const currentUserProfile = users.find(u => u.uid === currentUser?.uid || u.email === currentUser?.email);
+    // Ensure Super Admin is always Admin, even if profile lookup fails
     const isSuperAdmin = currentUser?.email?.toLowerCase() === SUPER_ADMIN_EMAIL.toLowerCase();
+    const isAdmin = isSuperAdmin || currentUserProfile?.role === 'admin';
 
     // Allow access if admin OR super admin (redundant but safe)
     const canViewActivity = isAdmin || isSuperAdmin;
@@ -71,15 +76,27 @@ const UserManagementPage = () => {
         }
     };
 
-    const handleDeleteUser = async (id) => {
-        if (window.confirm('¿Estás seguro de que quieres eliminar este registro? Esta acción no se puede deshacer.')) {
-            try {
-                await authService.deleteUser(id);
-                loadUsers();
-            } catch (err) {
-                console.error(err);
-                setError(err.message || 'Failed to delete user');
-            }
+    const handleDeleteUser = (id) => {
+        const user = users.find(u => u.id === id);
+        if (user) {
+            setUserToDelete(user);
+        }
+    };
+
+    const executeDeleteUser = async () => {
+        if (!userToDelete) return;
+
+        const id = userToDelete.id;
+        try {
+            await authService.deleteUser(id);
+            await loadUsers();
+            setUserToDelete(null); // Close modal
+            // Optional: User feedback handled by UI update, but we can add a transient success state if needed
+        } catch (err) {
+            console.error("Error deleting user:", err);
+            // Close modal even on error to prevent stuck state, show error in main UI
+            setUserToDelete(null);
+            setError(`Error al eliminar: ${err.message}. Revisa la consola.`);
         }
     };
 
@@ -139,7 +156,11 @@ const UserManagementPage = () => {
                             // 1. It's not a superadmin doc OR
                             // 2. It's a superadmin doc but NOT the active session one (cleanup of dupes)
                             const canManageDoc = !isTargetSuperAdmin || (isSuperAdmin && !isCurrentActiveSession);
-                            const canManageActions = isSuperAdmin || user.role !== 'admin';
+                            // Only admins can manage. Super admins can do everything. Regular admins can manage non-admins.
+                            // Only admins can manage. Super admins can do everything. Regular admins can manage non-admins.
+                            // If isSuperAdmin -> True always.
+                            // If isAdmin -> True if target is NOT an admin.
+                            const canManageActions = isSuperAdmin || (isAdmin && user.role !== 'admin' && user.role !== 'instructor');
 
                             return (
                                 <tr key={user.id}>
@@ -271,10 +292,10 @@ const UserManagementPage = () => {
 
                                                     <button
                                                         onClick={() => handleDeleteUser(user.id)}
-                                                        className="text-gray-400 hover:text-red-600"
-                                                        title="Eliminar registro"
+                                                        className="text-gray-500 hover:text-red-700 hover:bg-red-50 p-1 rounded transition-colors"
+                                                        title="Eliminar usuario permanentemente"
                                                     >
-                                                        <Trash2 className="w-5 h-5" />
+                                                        <Trash2 className="w-5 h-5 text-red-500" />
                                                     </button>
                                                 </>
                                             )}
@@ -304,6 +325,56 @@ const UserManagementPage = () => {
                         loadUsers();
                     }}
                 />
+            )}
+
+            {/* Delete Confirmation Modal */}
+            {userToDelete && (
+                <div className="fixed inset-0 z-50 overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+                    <div className="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+                        {/* Background overlay */}
+                        <div className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" aria-hidden="true" onClick={() => setUserToDelete(null)}></div>
+
+                        <span className="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+
+                        <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
+                            <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+                                <div className="sm:flex sm:items-start">
+                                    <div className="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-red-100 sm:mx-0 sm:h-10 sm:w-10">
+                                        <Trash2 className="h-6 w-6 text-red-600" aria-hidden="true" />
+                                    </div>
+                                    <div className="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left">
+                                        <h3 className="text-lg leading-6 font-medium text-gray-900" id="modal-title">
+                                            Eliminar Usuario
+                                        </h3>
+                                        <div className="mt-2">
+                                            <p className="text-sm text-gray-500">
+                                                ¿Estás seguro de que deseas eliminar permanentemente al usuario <strong>{userToDelete.displayName}</strong> ({userToDelete.email})?
+                                                <br /><br />
+                                                Esta acción eliminará todos sus datos y acceso. <span className="text-red-600 font-bold">Esta acción no se puede deshacer.</span>
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div className="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
+                                <button
+                                    type="button"
+                                    onClick={executeDeleteUser}
+                                    className="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-red-600 text-base font-medium text-white hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 sm:ml-3 sm:w-auto sm:text-sm"
+                                >
+                                    Eliminar Definitivamente
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => setUserToDelete(null)}
+                                    className="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm"
+                                >
+                                    Cancelar
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             )}
         </div>
     );

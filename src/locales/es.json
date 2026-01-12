@@ -175,7 +175,13 @@
     "loginButton": "Entrar",
     "logout": "Cerrar Sesión",
     "error": "Credenciales inválidas",
-    "welcome": "Bienvenido, {{name}}"
+    "welcome": "Bienvenido, {{name}}",
+    "errors": {
+      "popupClosed": "El inicio de sesión fue cancelado.",
+      "popupBlocked": "El navegador bloqueó la ventana emergente. Por favor permítela e intenta de nuevo.",
+      "network": "Error de red. Verifica tu conexión.",
+      "generic": "Ocurrió un error al iniciar sesión."
+    }
   },
   "instructor": {
     "dashboard": "Panel de Control",

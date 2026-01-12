@@ -23,17 +23,19 @@ const InstructorLayout = () => {
     }
 
     return (
-        <div className="min-h-screen bg-gray-100 flex flex-col md:flex-row">
+        <div className="min-h-screen bg-black flex flex-col md:flex-row font-sans">
             {/* Sidebar */}
-            <div className="w-full md:w-64 bg-indigo-900 text-white flex flex-col">
-                <div className="p-6 border-b border-indigo-800 flex items-center justify-between md:block">
+            <div className="w-full md:w-64 bg-gray-900 border-r border-gray-800 flex flex-col">
+                <div className="p-6 border-b border-gray-800 flex items-center justify-between md:block">
                     <div className="flex items-center">
-                        <Shield className="h-8 w-8 text-indigo-300 mr-3" />
-                        <h1 className="text-xl font-bold">{t('instructor.dashboard')}</h1>
+                        <div className="bg-indigo-600/20 p-2 rounded-lg mr-3">
+                            <Shield className="h-6 w-6 text-indigo-400" />
+                        </div>
+                        <h1 className="text-xl font-bold text-white tracking-tight">VoxelHub <span className="text-gray-500 text-sm block font-medium">Instructor</span></h1>
                     </div>
                 </div>
 
-                <nav className="flex-1 p-4 space-y-2">
+                <nav className="flex-1 p-4 space-y-1">
                     {navigation.map((item) => {
                         const Icon = item.icon;
                         const isActive = location.pathname === item.href;
@@ -41,39 +43,42 @@ const InstructorLayout = () => {
                             <Link
                                 key={item.name}
                                 to={item.href}
-                                className={`flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors ${isActive
-                                    ? 'bg-indigo-800 text-white'
-                                    : 'text-indigo-300 hover:bg-indigo-800 hover:text-white'
+                                className={`flex items-center space-x-3 px-4 py-3 rounded-lg transition-all duration-200 group ${isActive
+                                    ? 'bg-gray-800 text-white border-l-4 border-indigo-500'
+                                    : 'text-gray-400 hover:bg-gray-800 hover:text-white'
                                     }`}
                             >
-                                <Icon className="w-5 h-5" />
-                                <span>{item.name}</span>
+                                <Icon className={`w-5 h-5 transition-colors ${isActive ? 'text-indigo-400' : 'text-gray-500 group-hover:text-gray-300'}`} />
+                                <span className="font-medium">{item.name}</span>
                             </Link>
                         );
                     })}
+                    <div className="my-4 border-t border-gray-800"></div>
                     <Link
                         to="/"
-                        className="flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors text-indigo-300 hover:bg-indigo-800 hover:text-white"
+                        className="flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors text-gray-400 hover:bg-gray-800 hover:text-white group"
                     >
-                        <ArrowLeft className="w-5 h-5" />
-                        <span>{t('navigation.home')}</span>
+                        <ArrowLeft className="w-5 h-5 text-gray-500 group-hover:text-gray-300" />
+                        <span className="font-medium">{t('navigation.home')}</span>
                     </Link>
                 </nav>
 
-                <div className="p-4 border-t border-indigo-800">
+                <div className="p-4 border-t border-gray-800">
                     <button
                         onClick={logout}
-                        className="flex items-center space-x-3 px-4 py-3 w-full text-indigo-300 hover:bg-indigo-800 hover:text-white rounded-lg transition-colors"
+                        className="flex items-center space-x-3 px-4 py-3 w-full text-gray-400 hover:bg-red-900/20 hover:text-red-400 rounded-lg transition-colors group"
                     >
-                        <LogOut className="w-5 h-5" />
-                        <span>{t('auth.logout')}</span>
+                        <LogOut className="w-5 h-5 group-hover:text-red-400 transition-colors" />
+                        <span className="font-medium">{t('auth.logout')}</span>
                     </button>
                 </div>
             </div>
 
             {/* Main Content */}
-            <div className="flex-1 overflow-auto p-8">
-                <Outlet />
+            <div className="flex-1 overflow-auto bg-black p-8">
+                <div className="max-w-7xl mx-auto">
+                    <Outlet />
+                </div>
             </div>
         </div>
     );

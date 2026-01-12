@@ -58,12 +58,14 @@ export const AuthProvider = ({ children }) => {
                         }
                     } else {
                         // User exists in Auth but not in DB
+                        // NOTE: getUserData is now robust, so if we are here, TRULY no user exists.
                         const newUser = {
+                            id: firebaseUser.uid, // ENSURE ID IS SET
                             uid: firebaseUser.uid,
                             email: firebaseUser.email,
                             displayName: firebaseUser.displayName,
                             photoURL: firebaseUser.photoURL,
-                            role: isSuperAdmin ? 'admin' : 'guest',
+                            role: isSuperAdmin ? 'admin' : 'student', // Default is student, not guest
                             status: isSuperAdmin ? 'approved' : 'pending',
                             createdAt: new Date().toISOString()
                         };
@@ -85,48 +87,48 @@ export const AuthProvider = ({ children }) => {
     }, []);
 
     const login = async () => {
-        setLoading(true);
+        // Local loading only
         try {
             const user = await authService.loginWithGoogle();
             setUser(user);
             return user;
         } catch (error) {
             throw error;
-        } finally {
-            setLoading(false);
         }
     };
 
     const logout = async () => {
-        setLoading(true);
+        // Local loading only
         try {
             await authService.logout();
             setUser(null);
-        } finally {
-            setLoading(false);
+        } catch (error) {
+            console.error("Logout error", error);
         }
     };
 
     const requestRole = async (role) => {
         if (!user) return;
-        setLoading(true);
         try {
-            const updatedUser = await authService.requestRole(user.id, role);
+            // Use ID or UID to be safe
+            const targetId = user.id || user.uid;
+            if (!targetId) throw new Error("User ID missing");
+
+            const updatedUser = await authService.requestRole(targetId, role);
             setUser(updatedUser);
-        } finally {
-            setLoading(false);
+        } catch (error) {
+            throw error;
         }
     };
 
     const updateProfile = async (data) => {
         if (!user) return;
-        setLoading(true);
         try {
             const updatedUser = await authService.updateUserProfile(user.id, data);
             setUser(prev => ({ ...prev, ...updatedUser }));
             return updatedUser;
-        } finally {
-            setLoading(false);
+        } catch (error) {
+            throw error;
         }
     };
 

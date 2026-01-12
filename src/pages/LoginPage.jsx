@@ -6,8 +6,11 @@ import { Lock, User, Shield, AlertTriangle, Ban, XCircle } from 'lucide-react';
 
 const LoginPage = () => {
     const [error, setError] = useState('');
-    // Get loading directly from AuthContext
-    const { login, logout, requestRole, user, loading } = useAuth();
+    const [isLoggingIn, setIsLoggingIn] = useState(false);
+    const [isRequestingRole, setIsRequestingRole] = useState(false);
+    // Get loading directly from AuthContext (only for initial load)
+    const { login, logout, requestRole, user, loading: authLoading } = useAuth();
+    const loading = authLoading || isLoggingIn || isRequestingRole;
     const navigate = useNavigate();
     const location = useLocation();
     const { t } = useTranslation();
@@ -27,30 +30,36 @@ const LoginPage = () => {
 
     const handleGoogleLogin = async () => {
         setError('');
+        setIsLoggingIn(true);
         try {
             await login();
             // Navigation handled by useEffect for 'approved' users.
-            // If user is suspended after login, handle it here.
-            // The `user` state will be updated by `login()` and then this component re-renders.
-            // The `suspendedUser` check below will then be true.
         } catch (err) {
             console.error(err);
             // Translate common firebase errors
-            let msg = t('auth.error');
-            if (err.code === 'auth/popup-closed-by-user') msg = "El inicio de sesión fue cancelado.";
-            if (err.code === 'auth/popup-blocked') msg = "El navegador bloqueó la ventana emergente. Por favor permítela e intenta de nuevo.";
-            if (err.code === 'auth/network-request-failed') msg = "Error de red. Verifica tu conexión.";
+            let msg = t('auth.errors.generic');
+            if (err.code === 'auth/popup-closed-by-user') msg = t('auth.errors.popupClosed');
+            if (err.code === 'auth/popup-blocked') msg = t('auth.errors.popupBlocked');
+            if (err.code === 'auth/network-request-failed') msg = t('auth.errors.network');
 
             setError(msg);
+        } finally {
+            setIsLoggingIn(false);
         }
     };
 
     const handleRoleRequest = async (role) => {
+        setIsRequestingRole(true);
         try {
             await requestRole(role);
+            // Force reload to reflect changes if state doesn't update immediately
+            alert(`Solicitud enviada correctamente. Tu acceso como ${role === 'admin' ? 'Instructor' : 'Usuario'} está pendiente de aprobación.`);
+            window.location.reload();
         } catch (err) {
             console.error(err);
             setError('Error al solicitar el rol. Inténtalo de nuevo.');
+        } finally {
+            setIsRequestingRole(false);
         }
     };
 

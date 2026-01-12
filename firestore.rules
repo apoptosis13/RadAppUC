@@ -13,15 +13,16 @@ service cloud.firestore {
     function isAdmin() {
       return isAuthenticated() && (
         (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
-         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin') ||
+         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['admin', 'instructor']) ||
         (exists(/databases/$(database)/documents/users/$(request.auth.token.email)) && 
-         get(/databases/$(database)/documents/users/$(request.auth.token.email)).data.role == 'admin')
+         get(/databases/$(database)/documents/users/$(request.auth.token.email)).data.role in ['admin', 'instructor'])
       );
     }
 
     // Check if the user is the Super Admin (Hardcoded protection)
     function isSuperAdmin() {
-      return isAuthenticated() && request.auth.token.email == 'gonzalodiazs@gmail.com';
+      // Use matches to check case-insensitive safely
+      return isAuthenticated() && request.auth.token.email.matches('(?i)^gonzalodiazs@gmail\\.com$');
     }
 
     // --- Collection Rules ---
@@ -42,8 +43,13 @@ service cloud.firestore {
       // 2. Admins can update any user (approvals, role changes)
       allow update: if isAuthenticated() && (request.auth.uid == userId || request.auth.token.email == userId || isAdmin());
       
-      // Deletion: Only Super Admin can delete users
-      allow delete: if isSuperAdmin();
+      // Deletion: Super Admin can delete anyone. Admins can delete non-admins/non-instructors.
+      allow delete: if isSuperAdmin() || (isAdmin() && !(existingData().role in ['admin', 'instructor']));
+    }
+
+    // Helper to get existing data safely
+    function existingData() {
+      return resource.data;
     }
     
     // Cases Collection (Clinical Cases)

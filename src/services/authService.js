@@ -1,7 +1,8 @@
-import { auth, googleProvider, db } from '../config/firebase';
+import { auth, googleProvider, db, functions } from '../config/firebase'; // Ensure functions is imported
 import { signInWithPopup, signOut } from 'firebase/auth';
-import { doc, getDoc, setDoc, updateDoc, collection, getDocs, deleteDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc, updateDoc, collection, getDocs, deleteDoc, query, where } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { httpsCallable } from 'firebase/functions'; // Import directly
 import { storage } from '../config/firebase';
 
 import { getRandomAvatar } from '../utils/userConstants';
@@ -9,7 +10,32 @@ import { getRandomAvatar } from '../utils/userConstants';
 const SUPER_ADMIN_EMAIL = 'gonzalodiazs@gmail.com';
 
 export const authService = {
-    // ... (previous code)
+    // Basic Auth
+    register: async (email, password, displayName) => {
+        // ... handled by firebase auth usually, but if manual:
+        const { createUserWithEmailAndPassword, updateProfile } = await import('firebase/auth');
+        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+        const user = userCredential.user;
+        await updateProfile(user, { displayName });
+
+        // Create user doc
+        await setDoc(doc(db, 'users', user.uid), {
+            uid: user.uid,
+            email,
+            displayName,
+            role: 'student', // Default role
+            status: 'pending',
+            createdAt: new Date().toISOString()
+        });
+
+        return user;
+    },
+
+    login: async (email, password) => {
+        const { signInWithEmailAndPassword } = await import('firebase/auth');
+        const userCredential = await signInWithEmailAndPassword(auth, email, password);
+        return userCredential.user;
+    },
 
     loginWithGoogle: async () => {
         try {
@@ -18,40 +44,56 @@ export const authService = {
             const user = result.user;
 
             // 1. Try to find user by UID first (modern way)
-            let userSnap = await getDoc(doc(db, 'users', user.uid));
             let userRef = doc(db, 'users', user.uid);
-            let isLegacy = false;
+            let userSnap = await getDoc(userRef);
             let wasMigrated = false;
 
-            // 2. If not found by UID, try by Email (legacy way)
+            // 2. If not found by UID, perform robust search by Email to find ANY legacy/duplicate account
+            // We use the static imports (query, where) defined at the top
             if (!userSnap.exists()) {
-                const emailRef = doc(db, 'users', user.email);
-                const emailSnap = await getDoc(emailRef);
+                const usersRef = collection(db, 'users');
+                const q = query(usersRef, where("email", "==", user.email));
+                const querySnap = await getDocs(q);
 
-                if (emailSnap.exists()) {
-                    // LAZY MIGRATION: Move data to UID doc and delete old one
-                    const legacyData = emailSnap.data();
-                    const newData = { ...legacyData, uid: user.uid };
+                if (!querySnap.empty) {
+                    // Found existing doc(s). Pick the first one.
+                    const existingDoc = querySnap.docs[0];
+                    const existingData = existingDoc.data();
 
-                    await setDoc(doc(db, 'users', user.uid), newData);
-                    await deleteDoc(emailRef);
+                    console.log("Found existing user by email:", existingDoc.id);
 
-                    // Now read it back from the new location
-                    userSnap = await getDoc(doc(db, 'users', user.uid));
-                    userRef = doc(db, 'users', user.uid);
+                    // Consolidate to UID doc
+                    const newData = { ...existingData, uid: user.uid };
+
+                    // Save to correct UID location
+                    await setDoc(userRef, newData);
+
+                    // Delete the old doc (whether it was email-ID or a different UID that shouldn't exist)
+                    // ONLY delete if the ID is different from the new UID (avoid self-delete logic error)
+                    if (existingDoc.id !== user.uid) {
+                        await deleteDoc(existingDoc.ref);
+                    }
+
+                    // Reload from new location
+                    userSnap = await getDoc(userRef);
+                    // userRef is already correct
                     wasMigrated = true;
-                }
-            } else {
-                // Check if there's a residual legacy doc and delete it if so
-                const emailRef = doc(db, 'users', user.email);
-                const emailSnap = await getDoc(emailRef);
-                if (emailSnap.exists()) {
-                    await deleteDoc(emailRef);
+
+                    // Clean up any OTHER duplicates if they exist (Delete all other docs with same email)
+                    if (querySnap.size > 1) {
+                        console.warn("Found multiple duplicates for email, cleaning up...");
+                        for (let i = 1; i < querySnap.docs.length; i++) {
+                            const dupDoc = querySnap.docs[i];
+                            if (dupDoc.id !== user.uid) {
+                                await deleteDoc(dupDoc.ref);
+                            }
+                        }
+                    }
                 }
             }
 
             let dbUser;
-            const isSuperAdmin = user.email === SUPER_ADMIN_EMAIL;
+            const isSuperAdmin = user.email.toLowerCase() === SUPER_ADMIN_EMAIL.toLowerCase();
 
             if (!userSnap.exists()) {
                 // New user - Use UID as ID
@@ -61,7 +103,8 @@ export const authService = {
                     email: user.email,
                     displayName: user.displayName,
                     photoURL: avatar,
-                    role: isSuperAdmin ? 'admin' : 'guest',
+                    // DEFAULT ROLE IS NOW 'student' (Pending), NOT 'guest'
+                    role: isSuperAdmin ? 'admin' : 'student',
                     status: isSuperAdmin ? 'approved' : 'pending',
                     createdAt: new Date().toISOString()
                 };
@@ -152,10 +195,22 @@ export const authService = {
                 if (uidSnap.exists()) return { id: uidSnap.id, ...uidSnap.data() };
             }
 
-            // Priority 2: Email lookup
+            // Priority 2: Email lookup (Legacy ID = email)
             const userRef = doc(db, 'users', email);
             const userSnap = await getDoc(userRef);
-            return userSnap.exists() ? { id: userSnap.id, ...userSnap.data() } : null;
+            if (userSnap.exists()) return { id: userSnap.id, ...userSnap.data() };
+
+            // Priority 3: Robust Query lookup (Any ID, matches email)
+            const usersRef = collection(db, 'users');
+            const q = query(usersRef, where("email", "==", email));
+            const querySnap = await getDocs(q);
+
+            if (!querySnap.empty) {
+                const foundDoc = querySnap.docs[0];
+                return { id: foundDoc.id, ...foundDoc.data() };
+            }
+
+            return null;
         } catch (error) {
             console.error("Error fetching user data:", error);
             return null;
@@ -176,7 +231,7 @@ export const authService = {
         const userData = userSnap.data();
 
         // Protection: Don't allow changing super admin status
-        if (userData.email === SUPER_ADMIN_EMAIL) {
+        if (userData.email.toLowerCase() === SUPER_ADMIN_EMAIL.toLowerCase()) {
             throw new Error("No se puede modificar el estado del Administrador Principal");
         }
 
@@ -192,32 +247,35 @@ export const authService = {
     requestRole: async (docId, requestedRole) => {
         const userRef = doc(db, 'users', docId);
         await updateDoc(userRef, { requestedRole });
+
+        // Force update just in case state is stale
         const userSnap = await getDoc(userRef);
         return { id: docId, ...userSnap.data() };
     },
 
     deleteUser: async (docId) => {
-        const currentUser = auth.currentUser;
-        if (!currentUser) throw new Error("No autenticado");
-
-        // Protection: Don't allow deleting the ACTIVE session document
-        if (docId === currentUser.uid) {
-            throw new Error("No puedes eliminar el documento de tu sesión activa");
+        // 1. Try Cloud Function first (Deletes Auth + Firestore)
+        try {
+            console.log("Attempting delete via Cloud Function for:", docId);
+            const deleteUserFn = httpsCallable(functions, 'deleteUser');
+            await deleteUserFn({ userId: docId });
+            console.log("Cloud Function delete successful");
+            return; // Success
+        } catch (fnError) {
+            console.warn("Cloud Function deletion failed:", fnError);
+            console.log("Falling back to direct Firestore deletion...");
         }
 
-        const userRef = doc(db, 'users', docId);
-        const userSnap = await getDoc(userRef);
-
-        if (!userSnap.exists()) return;
-
-        const userData = userSnap.data();
-
-        // Protection: Non-superadmins cannot delete a superadmin doc
-        if (userData.email === SUPER_ADMIN_EMAIL && currentUser.email !== SUPER_ADMIN_EMAIL) {
-            throw new Error("Solo el Administrador Principal puede eliminar documentos de Admin");
+        // 2. Fallback: Direct Firestore Delete (Manual Cleanup)
+        // This handles cases where Cloud Functions aren't deployed or the user is a legacy/email-only user.
+        try {
+            const userRef = doc(db, 'users', docId);
+            await deleteDoc(userRef);
+            console.log("Direct Firestore deletion successful");
+        } catch (dbError) {
+            console.error("Direct deletion also failed:", dbError);
+            throw new Error(`Failed to delete user: ${dbError.message}`);
         }
-
-        await deleteDoc(userRef);
     },
 
     // ... (rest of the file)
@@ -225,11 +283,12 @@ export const authService = {
     // Legacy method support (if needed) or remove
     addUser: async (userData) => {
         // For manual addition by admin (if kept)
-        // We use email as ID
-        if (!userData.email && userData.username) userData.email = `${userData.username}@example.com`; // Fallback
+        // Prefer UID if available, else Email
+        const id = userData.uid || userData.email || `${userData.username}@example.com`;
 
-        await setDoc(doc(db, 'users', userData.email), {
+        await setDoc(doc(db, 'users', id), {
             ...userData,
+            email: userData.email || id,
             status: 'approved', // Admin added users are approved
             createdAt: new Date().toISOString()
         });
@@ -240,7 +299,8 @@ export const authService = {
     },
 
     syncUser: async (userData) => {
-        const userRef = doc(db, 'users', userData.email);
+        const id = userData.uid || userData.email;
+        const userRef = doc(db, 'users', id);
         await setDoc(userRef, userData, { merge: true });
     },
 

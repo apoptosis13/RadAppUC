@@ -24,4 +24,8 @@ export const db = initializeFirestore(app, {
     experimentalForceLongPolling: true,
 });
 export const storage = getStorage(app);
-export const functions = getFunctions(app, "us-central1");
+export const functions = getFunctions(app);
+// Connect to emulators if needed
+// if (window.location.hostname === 'localhost') {
+//     connectFunctionsEmulator(functions, 'localhost', 5001);
+// }, "us-central1");

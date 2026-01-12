@@ -175,7 +175,13 @@
         "loginButton": "Sign In",
         "logout": "Logout",
         "error": "Invalid credentials",
-        "welcome": "Welcome, {{name}}"
+        "welcome": "Welcome, {{name}}",
+        "errors": {
+            "popupClosed": "Sign-in was cancelled.",
+            "popupBlocked": "The browser blocked the popup. Please allow it and try again.",
+            "network": "Network error. Check your connection.",
+            "generic": "An error occurred during sign-in."
+        }
     },
     "instructor": {
         "dashboard": "Dashboard",

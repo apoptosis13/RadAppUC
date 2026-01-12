@@ -69,18 +69,18 @@ const ImageViewer = ({ images = [], alt, overlays = [] }) => {
     return (
         <div className="space-y-4">
             {/* Toolbar */}
-            <div className="flex flex-wrap items-center gap-4 p-2 bg-gray-100 dark:bg-gray-800 rounded-lg">
+            <div className="flex flex-wrap items-center gap-4 p-2 bg-gray-100 rounded-lg text-gray-700">
                 <div className="flex items-center space-x-2">
-                    <button onClick={() => setZoom(z => Math.max(1, z - 0.1))} className="p-1 hover:bg-gray-200 dark:hover:bg-gray-700 rounded" title="Zoom Out">
+                    <button onClick={() => setZoom(z => Math.max(1, z - 0.1))} className="p-1 hover:bg-gray-200 rounded" title="Zoom Out">
                         <ZoomOut size={20} />
                     </button>
-                    <span className="text-xs w-8 text-center">{Math.round(zoom * 100)}%</span>
-                    <button onClick={() => setZoom(z => Math.min(3, z + 0.1))} className="p-1 hover:bg-gray-200 dark:hover:bg-gray-700 rounded" title="Zoom In">
+                    <span className="text-xs w-8 text-center font-medium">{Math.round(zoom * 100)}%</span>
+                    <button onClick={() => setZoom(z => Math.min(3, z + 0.1))} className="p-1 hover:bg-gray-200 rounded" title="Zoom In">
                         <ZoomIn size={20} />
                     </button>
                 </div>
 
-                <div className="h-6 w-px bg-gray-300 dark:bg-gray-600"></div>
+                <div className="h-6 w-px bg-gray-300"></div>
 
                 <div className="flex items-center space-x-2">
                     <Sun size={20} />
@@ -90,7 +90,7 @@ const ImageViewer = ({ images = [], alt, overlays = [] }) => {
                         max="150"
                         value={brightness}
                         onChange={(e) => setBrightness(Number(e.target.value))}
-                        className="w-24 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer dark:bg-gray-700"
+                        className="w-24 h-2 bg-gray-300 rounded-lg appearance-none cursor-pointer accent-indigo-600 border border-gray-400"
                     />
                 </div>
 
@@ -102,12 +102,12 @@ const ImageViewer = ({ images = [], alt, overlays = [] }) => {
                         max="150"
                         value={contrast}
                         onChange={(e) => setContrast(Number(e.target.value))}
-                        className="w-24 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer dark:bg-gray-700"
+                        className="w-24 h-2 bg-gray-300 rounded-lg appearance-none cursor-pointer accent-indigo-600 border border-gray-400"
                     />
                 </div>
 
                 <div className="ml-auto">
-                    <button onClick={resetTools} className="flex items-center px-2 py-1 text-sm text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white">
+                    <button onClick={resetTools} className="flex items-center px-2 py-1 text-sm text-gray-600 hover:text-gray-900 transition-colors">
                         <RotateCcw size={16} className="mr-1" />
                         Reset
                     </button>

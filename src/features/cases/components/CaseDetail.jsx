@@ -79,103 +79,104 @@ const CaseDetail = () => {
     }
 
     return (
-        <div className="max-w-5xl mx-auto">
-            <div className="mb-6">
-                <Link to="/cases" className="inline-flex items-center text-sm text-gray-500 hover:text-gray-700">
-                    <ArrowLeft className="w-4 h-4 mr-1" />
-                    {t('cases.back')}
-                </Link>
-            </div>
-
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-                {/* Left Column - Image (Sticky) */}
-                <div className="lg:col-span-7 lg:sticky lg:top-6 space-y-4">
-                    <div className="bg-white rounded-lg shadow overflow-hidden">
-                        <div className="p-1">
-                            <ImageViewer
-                                images={caseItem.images || (caseItem.image ? [caseItem.image] : [])}
-                                alt={caseItem.title || t(caseItem.titleKey)}
-                            />
-                        </div>
-                    </div>
-                </div>
-
-                {/* Right Column - Info & Tools (Scrollable) */}
-                <div className="lg:col-span-5 space-y-6">
-                    {/* Case Header */}
-                    <div className="bg-white rounded-lg shadow p-6 border-l-4 border-indigo-500">
-                        <h1 className="text-2xl font-bold text-gray-900 mb-2">
+        <div className="min-h-screen bg-black text-gray-100 flex flex-col">
+            {/* Immersive Header */}
+            <div className="bg-gray-900/50 backdrop-blur-md border-b border-gray-800 sticky top-0 z-40 px-6 py-4 flex items-center justify-between">
+                <div className="flex items-center space-x-4">
+                    <Link to="/cases" className="p-2 rounded-full hover:bg-gray-800 text-gray-400 hover:text-white transition-colors">
+                        <ArrowLeft className="w-5 h-5" />
+                    </Link>
+                    <div>
+                        <h1 className="text-xl font-bold text-white tracking-tight">
                             {(caseItem.titleKey && t(caseItem.titleKey)) ||
                                 (i18n.language === 'en' && caseItem.title_en) ||
                                 caseItem.title}
                         </h1>
-                        <div className="flex items-center space-x-4 text-sm text-gray-500">
-                            <span className="bg-gray-100 px-2 py-1 rounded font-medium text-gray-700">{t(`cases.modality.${caseItem.modality}`)}</span>
-                            <span className={`px-2 py-1 rounded font-medium ${caseItem.difficulty === 'Beginner' ? 'bg-green-100 text-green-800' :
-                                caseItem.difficulty === 'Intermediate' ? 'bg-yellow-100 text-yellow-800' :
-                                    'bg-red-100 text-red-800'
+                        <div className="flex items-center space-x-3 text-xs text-gray-400 mt-1">
+                            <span className="uppercase tracking-wider font-semibold">{t(`cases.modality.${caseItem.modality}`)}</span>
+                            <span className="w-1 h-1 bg-gray-600 rounded-full"></span>
+                            <span className={`${caseItem.difficulty === 'Beginner' ? 'text-green-400' :
+                                caseItem.difficulty === 'Intermediate' ? 'text-yellow-400' :
+                                    'text-red-400'
                                 }`}>
                                 {t(`cases.difficulty.${caseItem.difficulty}`)}
                             </span>
                         </div>
                     </div>
-
-                    {/* History Section */}
-                    <div className="bg-white rounded-lg shadow p-6">
-                        <h2 className="text-lg font-semibold text-gray-900 mb-2 flex items-center">
-                            <span className="w-1 h-6 bg-indigo-500 rounded mr-2"></span>
-                            {t('cases.history')}
-                        </h2>
-                        <p className="text-gray-700 leading-relaxed">
-                            {(caseItem.historyKey && t(caseItem.historyKey)) ||
-                                (i18n.language === 'en' && caseItem.history_en) ||
-                                caseItem.history}
-                        </p>
-                    </div>
-
-                    {/* Diagnosis Form */}
-                    <DiagnosisForm
-                        correctDiagnosis={(caseItem.correctDiagnosisKey && t(caseItem.correctDiagnosisKey)) ||
-                            (i18n.language === 'en' && caseItem.correctDiagnosis_en) ||
-                            caseItem.correctDiagnosis}
-                        caseData={caseItem}
-                        onComplete={() => setIsDiagnosisSubmitted(true)}
-                    />
-
-                    {/* Learning Objectives (Conditional) */}
-                    {isDiagnosisSubmitted && areQuestionsAnswered && (
-                        (() => {
-                            const hasEnglish = caseItem.learningObjectives_en && caseItem.learningObjectives_en.some(o => o && o.trim());
-                            const objectives = (i18n.language === 'en' && hasEnglish) ? caseItem.learningObjectives_en : caseItem.learningObjectives;
-                            return objectives && objectives.length > 0 && objectives.some(o => o);
-                        })()
-                    ) && (
-                            <div className="bg-blue-50 rounded-lg p-4 border border-blue-100">
-                                <h3 className="text-sm font-medium text-blue-900 mb-2">{t('cases.objectives.title')}</h3>
-                                <ul className="list-disc list-inside text-sm text-blue-800 space-y-1">
-                                    {(() => {
-                                        const hasEnglish = caseItem.learningObjectives_en && caseItem.learningObjectives_en.some(o => o && o.trim());
-                                        const objectives = (i18n.language === 'en' && hasEnglish) ? caseItem.learningObjectives_en : caseItem.learningObjectives;
-                                        return objectives.map((objective, index) => (
-                                            objective && <li key={index}>{objective}</li>
-                                        ));
-                                    })()}
-                                </ul>
-                            </div>
-                        )}
                 </div>
             </div>
 
-            {/* Questions - Full Width at Bottom */}
-            {((i18n.language === 'en' && caseItem.questions_en) || caseItem.questions) &&
-                (((i18n.language === 'en' && caseItem.questions_en) || caseItem.questions).length > 0) && (
-                    <div className="mt-8">
-                        <CaseQuestions
-                            questions={(i18n.language === 'en' && caseItem.questions_en) ? caseItem.questions_en : caseItem.questions}
-                            onAllQuestionsAnswered={() => setAreQuestionsAnswered(true)}
+            <div className="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-0 overflow-hidden h-[calc(100vh-80px)]">
+                {/* Left Column - Image (Main Stage) */}
+                <div className="lg:col-span-8 bg-black relative flex items-center justify-center border-r border-gray-800">
+                    <div className="w-full h-full p-4">
+                        <ImageViewer
+                            images={caseItem.images || (caseItem.image ? [caseItem.image] : [])}
+                            alt={caseItem.title || t(caseItem.titleKey)}
                         />
                     </div>
-                )}
+                </div>
+
+                {/* Right Column - Info & Tools (Sidebar) */}
+                <div className="lg:col-span-4 bg-gray-900 border-l border-gray-800 overflow-y-auto custom-scrollbar">
+                    <div className="p-6 space-y-6">
+                        {/* History Section */}
+                        <div className="bg-gray-800/50 rounded-xl p-5 border border-gray-700/50 shadow-inner">
+                            <h2 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3 flex items-center">
+                                <span className="w-1.5 h-1.5 bg-indigo-500 rounded-full mr-2"></span>
+                                {t('cases.history')}
+                            </h2>
+                            <p className="text-gray-300 leading-relaxed text-sm">
+                                {(caseItem.historyKey && t(caseItem.historyKey)) ||
+                                    (i18n.language === 'en' && caseItem.history_en) ||
+                                    caseItem.history}
+                            </p>
+                        </div>
+
+                        {/* Diagnosis Form */}
+                        <DiagnosisForm
+                            correctDiagnosis={(caseItem.correctDiagnosisKey && t(caseItem.correctDiagnosisKey)) ||
+                                (i18n.language === 'en' && caseItem.correctDiagnosis_en) ||
+                                caseItem.correctDiagnosis}
+                            caseData={caseItem}
+                            onComplete={() => setIsDiagnosisSubmitted(true)}
+                        />
+
+                        {/* Learning Objectives (Conditional) */}
+                        {isDiagnosisSubmitted && areQuestionsAnswered && (
+                            (() => {
+                                const hasEnglish = caseItem.learningObjectives_en && caseItem.learningObjectives_en.some(o => o && o.trim());
+                                const objectives = (i18n.language === 'en' && hasEnglish) ? caseItem.learningObjectives_en : caseItem.learningObjectives;
+                                return objectives && objectives.length > 0 && objectives.some(o => o);
+                            })()
+                        ) && (
+                                <div className="bg-blue-900/20 rounded-xl p-4 border border-blue-500/30">
+                                    <h3 className="text-sm font-medium text-blue-300 mb-2">{t('cases.objectives.title')}</h3>
+                                    <ul className="list-disc list-inside text-sm text-blue-200 space-y-1">
+                                        {(() => {
+                                            const hasEnglish = caseItem.learningObjectives_en && caseItem.learningObjectives_en.some(o => o && o.trim());
+                                            const objectives = (i18n.language === 'en' && hasEnglish) ? caseItem.learningObjectives_en : caseItem.learningObjectives;
+                                            return objectives.map((objective, index) => (
+                                                objective && <li key={index}>{objective}</li>
+                                            ));
+                                        })()}
+                                    </ul>
+                                </div>
+                            )}
+
+                        {/* Questions */}
+                        {((i18n.language === 'en' && caseItem.questions_en) || caseItem.questions) &&
+                            (((i18n.language === 'en' && caseItem.questions_en) || caseItem.questions).length > 0) && (
+                                <div className="mt-8 pt-6 border-t border-gray-800">
+                                    <CaseQuestions
+                                        questions={(i18n.language === 'en' && caseItem.questions_en) ? caseItem.questions_en : caseItem.questions}
+                                        onAllQuestionsAnswered={() => setAreQuestionsAnswered(true)}
+                                    />
+                                </div>
+                            )}
+                    </div>
+                </div>
+            </div>
         </div>
     );
 };
