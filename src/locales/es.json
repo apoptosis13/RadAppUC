@@ -6,6 +6,11 @@
     "instructor": "Portal del Instructor",
     "profile": "Mi Perfil"
   },
+  "common": {
+    "save": "Guardar",
+    "cancel": "Cancelar",
+    "confirm": "Confirmar"
+  },
   "home": {
     "title": "VoxelHub",
     "subtitle": "Conecta. Visualiza. Aprende.",
@@ -42,14 +47,6 @@
       "knee-mri": {
         "title": "RMN de Rodilla",
         "description": "Anatomía detallada de la articulación de la rodilla en secuencias de RMN."
-      },
-      "chest-xray": {
-        "title": "Rayos X de Tórax",
-        "description": "Vistas estándar PA y Lateral del tórax."
-      },
-      "brain-ct": {
-        "title": "TC Cerebral",
-        "description": "Secciones axiales del parénquima cerebral."
       }
     },
     "landing": {
@@ -237,6 +234,7 @@
     "avatar": "Avatar",
     "changeAvatar": "Cambiar Avatar",
     "uploadAvatar": "Subir Imagen",
+    "adjustImage": "Ajustar Imagen",
     "presets": "Predeterminados",
     "preferences": "Preferencias",
     "theme": "Apariencia",

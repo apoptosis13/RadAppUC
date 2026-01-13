@@ -4,9 +4,10 @@ import { caseService } from '../../../services/caseService';
 import ImageViewer from '../../anatomy/components/ImageViewer';
 import CaseQuestions from './CaseQuestions';
 import DiagnosisForm from './DiagnosisForm';
-import { ArrowLeft, AlertCircle } from 'lucide-react';
+import { ArrowLeft, AlertCircle, Brain } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import i18n from '../../../i18n';
+import QuizModule from '../../quiz/QuizModule';
 
 const CaseDetail = () => {
     const { caseId } = useParams();
@@ -14,6 +15,7 @@ const CaseDetail = () => {
     const [loading, setLoading] = useState(true);
     const [isDiagnosisSubmitted, setIsDiagnosisSubmitted] = useState(false);
     const [areQuestionsAnswered, setAreQuestionsAnswered] = useState(false);
+    const [showQuiz, setShowQuiz] = useState(false);
     const { t } = useTranslation();
 
     const [error, setError] = useState(null);
@@ -164,6 +166,30 @@ const CaseDetail = () => {
                                 </div>
                             )}
 
+                        {/* AI Quiz Trigger */}
+                        {isDiagnosisSubmitted && (
+                            <div className="bg-indigo-900/20 rounded-xl p-5 border border-indigo-500/30 text-center">
+                                <div className="flex justify-center mb-3">
+                                    <div className="p-3 bg-indigo-500/20 rounded-full">
+                                        <Brain className="w-8 h-8 text-indigo-400" />
+                                    </div>
+                                </div>
+                                <h3 className="text-lg font-bold text-white mb-2">
+                                    Desafío de Conocimiento
+                                </h3>
+                                <p className="text-sm text-indigo-200 mb-4">
+                                    Pon a prueba lo aprendido con 10 preguntas generadas por IA sobre este caso.
+                                </p>
+                                <button
+                                    onClick={() => setShowQuiz(true)}
+                                    className="w-full inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 shadow-sm transition-colors"
+                                >
+                                    <Brain className="w-4 h-4 mr-2" />
+                                    Iniciar Quiz con IA
+                                </button>
+                            </div>
+                        )}
+
                         {/* Questions */}
                         {((i18n.language === 'en' && caseItem.questions_en) || caseItem.questions) &&
                             (((i18n.language === 'en' && caseItem.questions_en) || caseItem.questions).length > 0) && (
@@ -177,6 +203,19 @@ const CaseDetail = () => {
                     </div>
                 </div>
             </div>
+
+            {/* Quiz Modal */}
+            {showQuiz && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
+                    <QuizModule
+                        diagnosis={(caseItem.correctDiagnosisKey && t(caseItem.correctDiagnosisKey)) ||
+                            (i18n.language === 'en' && caseItem.correctDiagnosis_en) ||
+                            caseItem.correctDiagnosis}
+                        difficulty={caseItem.difficulty}
+                        onClose={() => setShowQuiz(false)}
+                    />
+                </div>
+            )}
         </div>
     );
 };

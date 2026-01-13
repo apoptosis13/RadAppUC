@@ -6,6 +6,11 @@
         "instructor": "Instructor Portal",
         "profile": "My Profile"
     },
+    "common": {
+        "save": "Save",
+        "cancel": "Cancel",
+        "confirm": "Confirm"
+    },
     "home": {
         "title": "VoxelHub",
         "subtitle": "Connect. Visualize. Learn.",
@@ -42,14 +47,6 @@
             "knee-mri": {
                 "title": "Knee MRI",
                 "description": "Detailed anatomy of the knee joint in MRI sequences."
-            },
-            "chest-xray": {
-                "title": "Chest X-Ray",
-                "description": "Standard PA and Lateral views of the chest."
-            },
-            "brain-ct": {
-                "title": "Brain CT",
-                "description": "Axial sections of the brain parenchyma."
             }
         },
         "landing": {
@@ -237,6 +234,7 @@
         "avatar": "Avatar",
         "changeAvatar": "Change Avatar",
         "uploadAvatar": "Upload Image",
+        "adjustImage": "Adjust Image",
         "presets": "Presets",
         "preferences": "Preferences",
         "theme": "Appearance",

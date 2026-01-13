@@ -28,54 +28,57 @@ const AnatomyPage = () => {
     }, []);
 
     const regions = REGION_IDS.map(regionId => {
-        const regionModules = firestoreModules.filter(m => m.region === regionId).map(m => {
-            // Find first image from first series as preview
-            let previewImage = null;
-            if (m.series && m.series.length > 0) {
-                for (const s of m.series) {
-                    if (s.images && s.images.length > 0) {
-                        previewImage = s.images[0].url;
-                        break;
+        // Filter modules by region AND exclude non-MSK modules (Chest, Brain)
+        const regionModules = firestoreModules
+            .filter(m => m.region === regionId && !['chest-xray', 'brain-ct'].includes(m.id))
+            .map(m => {
+                // Find first image from first series as preview
+                let previewImage = null;
+                if (m.series && m.series.length > 0) {
+                    for (const s of m.series) {
+                        if (s.images && s.images.length > 0) {
+                            previewImage = s.images[0].url;
+                            break;
+                        }
                     }
                 }
-            }
-            // Use the utility to get translated title and description (subtitle)
-            const displayTitle = getLocalizedModuleField(m, 'title', i18n.language);
-            const displaySubtitle = getLocalizedModuleField(m, 'description', i18n.language) || m.subtitle;
+                // Use the utility to get translated title and description (subtitle)
+                const displayTitle = getLocalizedModuleField(m, 'title', i18n.language);
+                const displaySubtitle = getLocalizedModuleField(m, 'description', i18n.language) || m.subtitle;
 
-            // Resolve Thumbnail with Local Fallback
-            const LOCAL_THUMBNAILS = {
-                'knee': '/thumbnails/knee.png',
-                'rodilla': '/thumbnails/knee.png',
-                'shoulder': '/thumbnails/shoulder.png',
-                'hombro': '/thumbnails/shoulder.png',
-                'elbow': '/thumbnails/elbow.png',
-                'codo': '/thumbnails/elbow.png',
-                'wrist': '/thumbnails/wrist.png',
-                'muñeca': '/thumbnails/wrist.png',
-                'pelvis': '/thumbnails/pelvis.png',
-                'hip': '/thumbnails/hip.png',
-                'cadera': '/thumbnails/hip.png',
-                'ankle': '/thumbnails/ankle.png',
-                'tobillo': '/thumbnails/ankle.png'
-            };
+                // Resolve Thumbnail with Local Fallback
+                const LOCAL_THUMBNAILS = {
+                    'knee': '/thumbnails/knee.png',
+                    'rodilla': '/thumbnails/knee.png',
+                    'shoulder': '/thumbnails/shoulder.png',
+                    'hombro': '/thumbnails/shoulder.png',
+                    'elbow': '/thumbnails/elbow.png',
+                    'codo': '/thumbnails/elbow.png',
+                    'wrist': '/thumbnails/wrist.png',
+                    'muñeca': '/thumbnails/wrist.png',
+                    'pelvis': '/thumbnails/pelvis.png',
+                    'hip': '/thumbnails/hip.png',
+                    'cadera': '/thumbnails/hip.png',
+                    'ankle': '/thumbnails/ankle.png',
+                    'tobillo': '/thumbnails/ankle.png'
+                };
 
-            let finalThumbnail = m.thumbnail;
+                let finalThumbnail = m.thumbnail;
 
-            if (!finalThumbnail) {
-                // Check ID or Title for keywords
-                const searchStr = (m.id + ' ' + (displayTitle || '')).toLowerCase();
-                const key = Object.keys(LOCAL_THUMBNAILS).find(k => searchStr.includes(k));
-                if (key) {
-                    finalThumbnail = LOCAL_THUMBNAILS[key];
+                if (!finalThumbnail) {
+                    // Check ID or Title for keywords
+                    const searchStr = (m.id + ' ' + (displayTitle || '')).toLowerCase();
+                    const key = Object.keys(LOCAL_THUMBNAILS).find(k => searchStr.includes(k));
+                    if (key) {
+                        finalThumbnail = LOCAL_THUMBNAILS[key];
+                    }
                 }
-            }
 
-            // Fallback to previewImage (full res) if no thumbnail found
-            finalThumbnail = finalThumbnail || previewImage;
+                // Fallback to previewImage (full res) if no thumbnail found
+                finalThumbnail = finalThumbnail || previewImage;
 
-            return { ...m, previewImage, thumbnail: finalThumbnail, displayTitle, displaySubtitle };
-        });
+                return { ...m, previewImage, thumbnail: finalThumbnail, displayTitle, displaySubtitle };
+            });
         return {
             id: regionId,
             title: t(`anatomy.regions.${regionId}.title`),

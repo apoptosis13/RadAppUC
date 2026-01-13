@@ -74,11 +74,10 @@ const UserActivityModal = ({ user, onClose, onRoleChange }) => {
                             <select
                                 value={selectedRole}
                                 onChange={(e) => setSelectedRole(e.target.value)}
-                                className="block w-48 pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md"
+                                className="block w-48 pl-3 pr-10 py-2 text-base border border-gray-300 bg-white text-gray-900 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md"
                             >
                                 <option value="student">Alumno</option>
                                 <option value="admin">Instructor (Admin)</option>
-                                <option value="guest">Invitado</option>
                             </select>
                             <button
                                 onClick={handleRoleUpdate}

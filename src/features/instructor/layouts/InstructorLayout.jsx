@@ -11,15 +11,14 @@ const InstructorLayout = () => {
     const { logout, user } = useAuth();
 
     const navigation = [
-        { name: t('instructor.dashboard'), href: '/instructor', icon: LayoutDashboard },
-        { name: t('instructor.createCase'), href: '/instructor/cases/create', icon: PlusCircle },
-        { name: t('instructor.manageCases'), href: '/instructor/cases', icon: FileText },
-        { name: 'Anatomía', href: '/instructor/anatomy', icon: Brain },
-        { name: t('instructor.users.title'), href: '/instructor/users', icon: Users },
+        { name: t('instructor.createCase'), href: '/instructor/cases/create', icon: PlusCircle, color: 'green' },
+        { name: t('instructor.manageCases'), href: '/instructor/cases', icon: FileText, color: 'blue' },
+        { name: 'Anatomía', href: '/instructor/anatomy', icon: Brain, color: 'purple' },
+        { name: t('instructor.users.title'), href: '/instructor/users', icon: Users, color: 'orange' },
     ];
 
     if (user?.email === 'gonzalodiazs@gmail.com') {
-        navigation.push({ name: 'Analíticas', href: '/instructor/analytics', icon: Activity });
+        navigation.push({ name: 'Analíticas', href: '/instructor/analytics', icon: Activity, color: 'indigo' });
     }
 
     return (
@@ -35,20 +34,55 @@ const InstructorLayout = () => {
                     </div>
                 </div>
 
-                <nav className="flex-1 p-4 space-y-1">
+                <nav className="flex-1 p-4 space-y-2">
+                    {/* Standalone Dashboard Button */}
+                    <Link
+                        to="/instructor"
+                        className={`flex items-center space-x-3 px-4 py-4 rounded-xl transition-all duration-300 group ${location.pathname === '/instructor'
+                            ? 'bg-orange-500/10 text-white border-2 border-orange-500 shadow-[0_0_15px_rgba(249,115,22,0.3)]'
+                            : 'bg-gray-800/40 text-gray-400 hover:bg-gray-800 hover:text-white border border-transparent hover:border-gray-700'
+                            }`}
+                    >
+                        <LayoutDashboard className={`w-6 h-6 transition-colors ${location.pathname === '/instructor' ? 'text-orange-400' : 'text-gray-500 group-hover:text-gray-300'}`} />
+                        <span className="font-bold text-lg">{t('instructor.dashboard')}</span>
+                    </Link>
+
+                    <div className="pt-4 pb-2">
+                        <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest px-4 mb-2">Gestión</p>
+                    </div>
+
                     {navigation.map((item) => {
                         const Icon = item.icon;
                         const isActive = location.pathname === item.href;
+                        const colorClass = item.color || 'indigo';
+
+                        // Dynamic Tailwind mappings
+                        const activeStyles = {
+                            blue: 'bg-blue-500/5 text-white border-blue-500 shadow-[0_0_10px_rgba(59,130,246,0.1)]',
+                            green: 'bg-green-500/5 text-white border-green-500 shadow-[0_0_10px_rgba(34,197,94,0.1)]',
+                            purple: 'bg-purple-500/5 text-white border-purple-500 shadow-[0_0_10px_rgba(168,85,247,0.1)]',
+                            orange: 'bg-orange-500/5 text-white border-orange-500 shadow-[0_0_10px_rgba(249,115,22,0.1)]',
+                            indigo: 'bg-indigo-500/5 text-white border-indigo-500 shadow-[0_0_10px_rgba(99,102,241,0.1)]'
+                        };
+
+                        const iconStyles = {
+                            blue: 'text-blue-400',
+                            green: 'text-green-400',
+                            purple: 'text-purple-400',
+                            orange: 'text-orange-400',
+                            indigo: 'text-indigo-400'
+                        };
+
                         return (
                             <Link
                                 key={item.name}
                                 to={item.href}
-                                className={`flex items-center space-x-3 px-4 py-3 rounded-lg transition-all duration-200 group ${isActive
-                                    ? 'bg-gray-800 text-white border-l-4 border-indigo-500'
-                                    : 'text-gray-400 hover:bg-gray-800 hover:text-white'
+                                className={`flex items-center space-x-3 px-4 py-3 rounded-lg transition-all duration-200 group border-l-4 ${isActive
+                                    ? activeStyles[colorClass]
+                                    : 'text-gray-400 border-transparent hover:bg-gray-800/50 hover:text-white hover:border-gray-700'
                                     }`}
                             >
-                                <Icon className={`w-5 h-5 transition-colors ${isActive ? 'text-indigo-400' : 'text-gray-500 group-hover:text-gray-300'}`} />
+                                <Icon className={`w-5 h-5 transition-colors ${isActive ? iconStyles[colorClass] : 'text-gray-500 group-hover:text-gray-300'}`} />
                                 <span className="font-medium">{item.name}</span>
                             </Link>
                         );

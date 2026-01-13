@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Plus, Edit, Trash2, X, Check, XCircle, Ban, PlayCircle, Crown, ArrowRightLeft } from 'lucide-react';
+import { Plus, Edit, Trash2, X, Check, XCircle, Ban, PlayCircle, Crown, ArrowRightLeft, Search, ArrowUp, ArrowDown } from 'lucide-react';
 import { authService } from '../../../services/authService';
 import { auth } from '../../../config/firebase';
 import { onAuthStateChanged } from 'firebase/auth';
@@ -17,6 +17,8 @@ const UserManagementPage = () => {
     const [error, setError] = useState('');
     const [selectedUser, setSelectedUser] = useState(null);
     const [userToDelete, setUserToDelete] = useState(null);
+    const [searchTerm, setSearchTerm] = useState('');
+    const [sortConfig, setSortConfig] = useState({ key: 'displayName', direction: 'asc' });
 
     // Manual reactivity
     useEffect(() => {
@@ -50,6 +52,70 @@ const UserManagementPage = () => {
     useEffect(() => {
         loadUsers();
     }, [loadUsers]);
+
+    // Role weighting for sorting (1 is Highest Rank/Top)
+    const getRoleWeight = (user) => {
+        if (user.email === SUPER_ADMIN_EMAIL) return 1;
+        switch (user.role) {
+            case 'admin':
+            case 'instructor':
+                return 2;
+            case 'student':
+                return 3;
+            default:
+                return 4;
+        }
+    };
+
+    const handleSort = (key) => {
+        let direction = 'asc';
+        if (sortConfig.key === key && sortConfig.direction === 'asc') {
+            direction = 'desc';
+        }
+        setSortConfig({ key, direction });
+    };
+
+    const getSortedAndFilteredUsers = React.useMemo(() => {
+        let filtered = [...users];
+
+        // Filter
+        if (searchTerm) {
+            const lowerTerm = searchTerm.toLowerCase();
+            filtered = filtered.filter(u =>
+                (u.displayName || '').toLowerCase().includes(lowerTerm) ||
+                (u.email || '').toLowerCase().includes(lowerTerm)
+            );
+        }
+
+        // Sort
+        filtered.sort((a, b) => {
+            if (sortConfig.key === 'role') {
+                const weightA = getRoleWeight(a);
+                const weightB = getRoleWeight(b);
+
+                if (weightA !== weightB) {
+                    // Primary Sort: Role Rank
+                    const result = weightA - weightB;
+                    return sortConfig.direction === 'asc' ? result : -result;
+                }
+
+                // Secondary Sort: Alphabetical by Name (Always A-Z for consistency within groups)
+                const nameA = (a.displayName || '').toLowerCase();
+                const nameB = (b.displayName || '').toLowerCase();
+                return nameA.localeCompare(nameB);
+            } else {
+                // Default string sort (displayName, email, etc)
+                const valA = (a[sortConfig.key] || '').toString().toLowerCase();
+                const valB = (b[sortConfig.key] || '').toString().toLowerCase();
+
+                if (valA === valB) return 0;
+                const result = valA < valB ? -1 : 1;
+                return sortConfig.direction === 'asc' ? result : -result;
+            }
+        });
+
+        return filtered;
+    }, [users, searchTerm, sortConfig]);
 
     const handleStatusChange = async (id, newStatus, newRole) => {
         try {
@@ -113,8 +179,22 @@ const UserManagementPage = () => {
 
     return (
         <div className="space-y-6">
-            <div className="flex justify-between items-center">
+            <div className="flex justify-between items-center flex-wrap gap-4">
                 <h1 className="text-2xl font-bold text-gray-900">{t('instructor.users.title')}</h1>
+
+                {/* Search Bar */}
+                <div className="relative">
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <Search className="h-5 w-5 text-gray-400" />
+                    </div>
+                    <input
+                        type="text"
+                        placeholder="Buscar usuario..."
+                        className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm shadow-sm"
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                    />
+                </div>
             </div>
 
             {error && (
@@ -123,18 +203,36 @@ const UserManagementPage = () => {
                 </div>
             )}
 
-            <div className="bg-white shadow overflow-hidden sm:rounded-lg">
+            <div className="bg-white shadow overflow-hidden sm:rounded-lg overflow-x-auto">
                 <table className="min-w-full divide-y divide-gray-200">
                     <thead className="bg-gray-50">
                         <tr>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                Usuario
+                            <th
+                                scope="col"
+                                className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 group"
+                                onClick={() => handleSort('displayName')}
+                            >
+                                <div className="flex items-center">
+                                    Usuario
+                                    {sortConfig.key === 'displayName' && (
+                                        sortConfig.direction === 'asc' ? <ArrowUp className="ml-1 h-4 w-4" /> : <ArrowDown className="ml-1 h-4 w-4" />
+                                    )}
+                                </div>
                             </th>
                             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                 Email
                             </th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                Rol Actual
+                            <th
+                                scope="col"
+                                className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                                onClick={() => handleSort('role')}
+                            >
+                                <div className="flex items-center">
+                                    Rol Actual
+                                    {sortConfig.key === 'role' && (
+                                        sortConfig.direction === 'asc' ? <ArrowUp className="ml-1 h-4 w-4" /> : <ArrowDown className="ml-1 h-4 w-4" />
+                                    )}
+                                </div>
                             </th>
                             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                 Estado
@@ -148,7 +246,7 @@ const UserManagementPage = () => {
                         </tr>
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-200">
-                        {users.map((user) => {
+                        {getSortedAndFilteredUsers.map((user) => {
                             const isTargetSuperAdmin = user.email === SUPER_ADMIN_EMAIL;
                             const isCurrentActiveSession = user.id === currentUser?.uid;
 

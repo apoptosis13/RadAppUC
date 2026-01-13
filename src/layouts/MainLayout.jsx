@@ -41,7 +41,7 @@ const MainLayout = () => {
                     <div className="flex justify-between h-16">
                         <div className="flex">
                             <div className="flex-shrink-0 flex items-center">
-                                <img className="h-10 w-auto" src="/voxelhub-logo-full.png" alt="VoxelHub Logo" />
+                                <img className="h-10 w-auto drop-shadow-[0_1px_3px_rgba(0,0,0,0.4)] dark:drop-shadow-none" src="/voxelhub-logo-full.png" alt="VoxelHub Logo" />
                             </div>
                             <div className="hidden sm:ml-6 sm:flex sm:space-x-8">
                                 {navItems.map((item) => {

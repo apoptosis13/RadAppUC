@@ -140,6 +140,40 @@ const mailTransport = nodemailer.createTransport({
     },
 });
 
+const emailTemplate = (title, content) => `
+<!DOCTYPE html>
+<html>
+<head>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap');
+    body { font-family: 'Inter', sans-serif; color: #111827; }
+    .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+    .header { text-align: center; margin-bottom: 24px; }
+    .logo { height: 40px; }
+    .content { background-color: #ffffff; padding: 32px; border-radius: 12px; border: 1px solid #e5e7eb; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); }
+    h2 { color: #111827; font-size: 24px; font-weight: 600; margin-bottom: 24px; margin-top: 0; }
+    p { font-size: 16px; line-height: 24px; margin-bottom: 16px; color: #374151; }
+    .button { background-color: #4F46E5; color: white !important; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: 600; margin-top: 16px; }
+    .footer { margin-top: 32px; font-size: 12px; color: #6B7280; text-align: center; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <img src="https://radiology-app-v2.web.app/voxelhub-logo-full.png" alt="VoxelHub" class="logo">
+    </div>
+    <div class="content">
+      <h2>${title}</h2>
+      ${content}
+    </div>
+    <div class="footer">
+      &copy; ${new Date().getFullYear()} VoxelHub. Todos los derechos reservados.
+    </div>
+  </div>
+</body>
+</html>
+`;
+
 // Callable Function for on-demand translation from Frontend
 exports.translateText = functions.https.onCall(async (data, context) => {
     // Check authentication
@@ -191,17 +225,16 @@ exports.notifyRoleRequest = functions.firestore
             }
 
             const mailOptions = {
-                from: `"VoxelHub" <${gmailEmail}>`,
+                from: `"VoxelHub" <admin@voxelhub.cl>`,
                 to: gmailEmail, // Sending to admin
                 subject: `Nueva solicitud de rol: ${newData.displayName}`,
-                html: `
-                    <h2>Nueva solicitud de acceso</h2>
-                    <p><strong>Usuario:</strong> ${newData.displayName} (${newData.email})</p>
-                    <p><strong>Rol solicitado:</strong> ${newData.requestedRole}</p>
-                    <p><strong>Fecha:</strong> ${new Date().toLocaleString()}</p>
+                html: emailTemplate('Nueva Solicitud de Acceso', `
+                    <p>El usuario <strong>${newData.displayName}</strong> (${newData.email}) ha solicitado un nuevo rol en la plataforma.</p>
+                    <p><strong>Rol solicitado:</strong> ${newData.requestedRole === 'instructor' || newData.requestedRole === 'admin' ? 'Instructor / Admin' : 'Alumno'}</p>
+                    <p><strong>Fecha:</strong> ${new Date().toLocaleString('es-CL')}</p>
                     <br>
-                    <p>Por favor ingrese a la consola de Firebase para aprobar o rechazar.</p>
-                `,
+                    <a href="https://console.firebase.google.com/" class="button">Gestionar en Firebase</a>
+                `),
             };
 
             try {
@@ -232,29 +265,28 @@ exports.notifyUserStatusChange = functions.firestore
             let htmlContent = "";
 
             if (newData.status === 'approved') {
-                subject = "🎉 ¡Bienvenido! Tu cuenta ha sido aprobada";
-                htmlContent = `
-                    <h2>¡Bienvenido a VoxelHub!</h2>
+                subject = "🎉 ¡Bienvenido a VoxelHub!";
+                htmlContent = emailTemplate('¡Tu cuenta ha sido aprobada!', `
                     <p>Hola <strong>${newData.displayName}</strong>,</p>
-                    <p>Nos complace informarte que tu solicitud de acceso ha sido <strong>APROBADA</strong>.</p>
-                    <p>Ya puedes iniciar sesión en la plataforma con tu cuenta de Google.</p>
-                    <br>
-                    <a href="https://radiology-app-v2.web.app/" style="background-color: #4F46E5; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">Ir a la Aplicación</a>
-                `;
+                    <p>Nos complace informarte que tu solicitud de acceso ha sido <strong>APROBADA</strong> por el equipo administrativo.</p>
+                    <p>Ya tienes acceso completo a la plataforma de entrenamiento para residentes.</p>
+                    <div style="text-align: center;">
+                        <a href="https://radiology-app-v2.web.app/" class="button">Ingresar a la Plataforma</a>
+                    </div>
+                `);
             } else if (newData.status === 'rejected') {
-                subject = "Actualización sobre tu solicitud de acceso";
-                htmlContent = `
-                    <h2>Solicitud de Acceso</h2>
+                subject = "Actualización sobre tu solicitud";
+                htmlContent = emailTemplate('Solicitud de Acceso', `
                     <p>Hola <strong>${newData.displayName}</strong>,</p>
                     <p>Lamentamos informarte que tu solicitud de acceso ha sido <strong>RECHAZADA</strong> por el administrador.</p>
-                    <p>Si crees que esto es un error, por favor ponte en contacto con la administración.</p>
-                `;
+                    <p>Si crees que esto es un error, por favor ponte en contacto con nosotros respondiendo a este correo.</p>
+                `);
             } else {
                 return null;
             }
 
             const mailOptions = {
-                from: `"Administrador VoxelHub" <${gmailEmail}>`,
+                from: `"Administrador VoxelHub" <admin@voxelhub.cl>`,
                 to: newData.email,
                 subject: subject,
                 html: htmlContent,
@@ -514,4 +546,106 @@ exports.analyzeFindingsAI_http = functions.https.onRequest((req, res) => {
             res.status(500).json({ error: "INTERNAL_ERROR", message: error.message });
         }
     });
+});
+
+// --- AI QUIZ GENERATION ---
+exports.generateQuizAI = functions.https.onCall(async (data, context) => {
+    // Check authentication
+    if (!context.auth) {
+        throw new functions.https.HttpsError(
+            'unauthenticated',
+            'Only authenticated users can generate quizzes.'
+        );
+    }
+
+    const { diagnosis, difficulty } = data;
+
+    if (!diagnosis) {
+        throw new functions.https.HttpsError(
+            'invalid-argument',
+            'The function must be called with a "diagnosis" (pathology) argument.'
+        );
+    }
+
+    const apiKey = functions.config().gemini?.key;
+    if (!apiKey) {
+        console.error("Gemini API key is missing in functions config.");
+        throw new functions.https.HttpsError(
+            'failed-precondition',
+            'AI Service not configured.'
+        );
+    }
+
+    // Map difficulty to Resident Year/Complexity
+    let contextStr = "Residente de Radiología de 1er año (Conceptos básicos, anatomía, signos típicos).";
+    if (difficulty === 'Intermediate') {
+        contextStr = "Residente de Radiología de 2do año (Diagnóstico diferencial, variantes, complicaciones).";
+    } else if (difficulty === 'Advanced') {
+        contextStr = "Residente de Radiología de 3er año o Fellow (Casos complejos, manejo, estadificación, diagnóstico diferencial fino).";
+    }
+
+    const prompt = `
+        Actúa como un profesor experto en Radiología.
+        Genera un quiz de 10 preguntas de selección múltiple sobre la patología: "${diagnosis}".
+        Nivel: ${contextStr}
+
+        Requisitos:
+        1. Las preguntas deben ser desafiantes y educativas.
+        2. Enfócate en hallazgos por imagen, diagnóstico diferencial, asociaciones clínicas y fisiopatología relevante para la imagen.
+        3. 4 alternativas por pregunta.
+        4. Solo una alternativa correcta.
+        5. Proporciona una explicación breve de por qué la correcta es correcta.
+
+        Responde ESTRICTAMENTE en este formato JSON Array:
+        [
+            {
+                "question": "Texto de la pregunta",
+                "options": ["Opción A", "Opción B", "Opción C", "Opción D"],
+                "correctAnswer": 0, // Índice de la respuesta correcta (0-3)
+                "explanation": "Explicación breve"
+            },
+            ...
+        ]
+    `;
+
+    try {
+        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                contents: [{ parts: [{ text: prompt }] }],
+                generationConfig: {
+                    responseMimeType: "application/json",
+                    temperature: 0.7
+                }
+            })
+        });
+
+        if (!response.ok) {
+            const errorText = await response.text();
+            console.error("Gemini API Error:", errorText);
+            throw new Error(`Gemini API Error: ${response.status}`);
+        }
+
+        const result = await response.json();
+
+        if (!result.candidates || !result.candidates[0]?.content?.parts[0]?.text) {
+            throw new Error("No content in Gemini response");
+        }
+
+        const responseText = result.candidates[0].content.parts[0].text;
+
+        // Ensure it's valid JSON
+        const quizData = JSON.parse(responseText);
+
+        return { quiz: quizData };
+
+    } catch (error) {
+        console.error("Generate Quiz Error:", error);
+        throw new functions.https.HttpsError(
+            'internal',
+            'Failed to generate quiz.',
+            { details: error.message }
+        );
+    }
 });

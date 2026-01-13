@@ -8,7 +8,7 @@ const AboutPage = () => {
     const ADMIN_INFO = {
         name: 'Gonzalo Díaz',
         role: 'Administrador',
-        email: 'gonzalodiazs@gmail.com'
+        email: 'admin@voxelhub.cl'
     };
 
     const VERSIONS = [

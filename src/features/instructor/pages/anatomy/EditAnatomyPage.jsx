@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { anatomyService } from '../../../../services/anatomyService';
-import { ArrowLeft, Save, Upload, Plus, Trash2, Image as ImageIcon, Layers, AlertTriangle } from 'lucide-react';
+import { ArrowLeft, Save, Upload, Plus, Trash2, Image as ImageIcon, Layers, AlertTriangle, Wand2, Languages, Loader2 } from 'lucide-react';
 import { activityLogService } from '../../../../services/activityLogService';
+import { translationService } from '../../../../services/translationService';
 import AnatomyEditor from "../../../anatomy/components/AnatomyEditor";
 import { ANATOMY_CATEGORIES } from '../../../../utils/anatomyConstants';
 
@@ -47,6 +48,7 @@ const EditAnatomyPage = () => {
     const [activeSeriesId, setActiveSeriesId] = useState(null);
     const [editorImageIndex, setEditorImageIndex] = useState(0);
     const [error, setError] = useState(null);
+    const [translatingFields, setTranslatingFields] = useState({}); // Tracking which field is translating
 
     useEffect(() => {
         if (isEditing) {
@@ -74,6 +76,25 @@ const EditAnatomyPage = () => {
     const handleChange = (e) => {
         const { name, value } = e.target;
         setFormData(prev => ({ ...prev, [name]: value }));
+    };
+
+    const handleAutoTranslate = async (sourceField, targetField) => {
+        const sourceText = formData[sourceField];
+        if (!sourceText || !sourceText.trim()) {
+            alert("No hay texto en español para traducir.");
+            return;
+        }
+
+        setTranslatingFields(prev => ({ ...prev, [targetField]: true }));
+        try {
+            const translation = await translationService.translate(sourceText);
+            setFormData(prev => ({ ...prev, [targetField]: translation }));
+        } catch (err) {
+            console.error("Translation fail:", err);
+            alert("Error al traducir: " + err.message);
+        } finally {
+            setTranslatingFields(prev => ({ ...prev, [targetField]: false }));
+        }
     };
 
     const handleAddSeries = () => {
@@ -407,8 +428,22 @@ const EditAnatomyPage = () => {
                     </div>
                     {/* English Title Field */}
                     <div className="col-span-1">
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                            Título en Inglés (Opcional)
+                        <label className="flex items-center justify-between text-sm font-medium text-gray-700 dark:text-gray-300">
+                            <span>Título en Inglés (Opcional)</span>
+                            <button
+                                type="button"
+                                onClick={() => handleAutoTranslate('title', 'titleEn')}
+                                disabled={translatingFields.titleEn || !formData.title}
+                                className="inline-flex items-center text-[10px] text-indigo-600 hover:text-indigo-500 font-bold uppercase tracking-wider"
+                                title="Traducir automáticamente desde el español"
+                            >
+                                {translatingFields.titleEn ? (
+                                    <Loader2 className="w-3 h-3 mr-1 animate-spin" />
+                                ) : (
+                                    <Languages className="w-3 h-3 mr-1" />
+                                )}
+                                Auto-traducir
+                            </button>
                         </label>
                         <input
                             type="text"
@@ -468,8 +503,22 @@ const EditAnatomyPage = () => {
                         />
                     </div>
                     <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                            Descripción (Inglés - Opcional)
+                        <label className="flex items-center justify-between text-sm font-medium text-gray-700 dark:text-gray-300">
+                            <span>Descripción (Inglés - Opcional)</span>
+                            <button
+                                type="button"
+                                onClick={() => handleAutoTranslate('description', 'descriptionEn')}
+                                disabled={translatingFields.descriptionEn || !formData.description}
+                                className="inline-flex items-center text-[10px] text-indigo-600 hover:text-indigo-500 font-bold uppercase tracking-wider"
+                                title="Traducir automáticamente desde el español"
+                            >
+                                {translatingFields.descriptionEn ? (
+                                    <Loader2 className="w-3 h-3 mr-1 animate-spin" />
+                                ) : (
+                                    <Languages className="w-3 h-3 mr-1" />
+                                )}
+                                Auto-traducir
+                            </button>
                         </label>
                         <textarea
                             name="descriptionEn"
