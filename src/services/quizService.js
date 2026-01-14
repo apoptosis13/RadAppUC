@@ -10,8 +10,8 @@ export const quizService = {
      */
     generateQuiz: async (diagnosis, difficulty) => {
         try {
-            const generateQuizFunction = httpsCallable(functions, 'generateQuizAI');
-            const result = await generateQuizFunction({ diagnosis, difficulty });
+            const generateQuizAI = httpsCallable(functions, 'generateQuizAI_v2');
+            const result = await generateQuizAI({ diagnosis, difficulty });
             return result.data.quiz;
         } catch (error) {
             console.error("Error generating quiz:", error);

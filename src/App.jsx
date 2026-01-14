@@ -7,9 +7,7 @@ import AnatomyViewerPage from './features/anatomy/pages/AnatomyViewerPage';
 import CaseList from './features/cases/components/CaseList';
 import CaseDetail from './features/cases/components/CaseDetail';
 import InstructorLayout from './features/instructor/layouts/InstructorLayout';
-import CreateCasePage from './features/instructor/pages/CreateCasePage';
-import ManageCasesPage from './features/instructor/pages/ManageCasesPage';
-import EditCasePage from './features/instructor/pages/EditCasePage';
+import CaseManagerPage from './features/instructor/pages/CaseManagerPage';
 import UserManagementPage from './features/instructor/pages/UserManagementPage';
 import ManageAnatomyPage from './features/instructor/pages/anatomy/ManageAnatomyPage';
 import EditAnatomyPage from './features/instructor/pages/anatomy/EditAnatomyPage';
@@ -55,9 +53,7 @@ function App() {
               </ProtectedRoute>
             }>
               <Route index element={<InstructorDashboard />} />
-              <Route path="cases" element={<ManageCasesPage />} />
-              <Route path="cases/create" element={<CreateCasePage />} />
-              <Route path="cases/edit/:caseId" element={<EditCasePage />} />
+              <Route path="cases" element={<CaseManagerPage />} />
               <Route path="users" element={<UserManagementPage />} />
               <Route path="anatomy" element={<ManageAnatomyPage />} />
               <Route path="anatomy/create" element={<EditAnatomyPage />} />

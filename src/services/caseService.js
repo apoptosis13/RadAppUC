@@ -111,10 +111,28 @@ export const caseService = {
             processedImages = rawImages;
         }
 
+        // Upload Image Stacks
+        let processedStacks = [];
+        if (newCase.imageStacks && Array.isArray(newCase.imageStacks)) {
+            try {
+                processedStacks = await Promise.all(newCase.imageStacks.map(async (stack) => {
+                    const stackImages = await Promise.all(
+                        (stack.images || []).map((img, idx) => uploadImageToStorage(img, newId, `stack_${stack.id}_${idx}`))
+                    );
+                    return { ...stack, images: stackImages };
+                }));
+            } catch (stackError) {
+                console.error("Stack upload failed:", stackError);
+                processedStacks = newCase.imageStacks;
+            }
+        }
+
         const caseData = {
             ...newCase,
             id: newId,
+            id: newId,
             images: processedImages,
+            imageStacks: processedStacks,
             image: processedImages.length > 0 ? processedImages[0] : null,
             createdAt: new Date().toISOString()
         };
@@ -146,9 +164,26 @@ export const caseService = {
             processedImages = rawImages;
         }
 
+        // Upload Image Stacks (Update)
+        let processedStacks = [];
+        if (data.imageStacks && Array.isArray(data.imageStacks)) {
+            try {
+                processedStacks = await Promise.all(data.imageStacks.map(async (stack) => {
+                    const stackImages = await Promise.all(
+                        (stack.images || []).map((img, idx) => uploadImageToStorage(img, id, `stack_${stack.id}_${idx}`))
+                    );
+                    return { ...stack, images: stackImages };
+                }));
+            } catch (stackError) {
+                console.error("Stack upload failed (update):", stackError);
+                processedStacks = data.imageStacks || [];
+            }
+        }
+
         const cleanData = {
             ...data,
             images: processedImages,
+            imageStacks: processedStacks,
             image: processedImages.length > 0 ? processedImages[0] : null,
             titleKey: deleteField(),
             historyKey: deleteField(),
@@ -157,7 +192,12 @@ export const caseService = {
             questions_en: (data.questions_en && data.questions_en.length > 0 && data.questions_en[0].text) ? data.questions_en : deleteField()
         };
 
-        const localData = { ...updatedCase, images: processedImages, image: processedImages.length > 0 ? processedImages[0] : null };
+        const localData = {
+            ...updatedCase,
+            images: processedImages,
+            imageStacks: processedStacks,
+            image: processedImages.length > 0 ? processedImages[0] : null
+        };
 
         try {
             const caseRef = doc(db, COLLECTION_NAME, id);

@@ -1,6 +1,6 @@
 import React from 'react';
 import { Trophy, Star, RefreshCw, X } from 'lucide-react';
-import Confetti from 'react-confetti'; // Optional: Just in case we have it? No, keeping it vanilla for now.
+import Confetti from 'react-confetti';
 
 const QuizResults = ({ score, totalQuestions, onRetry, onClose }) => {
     // Max theoretical score: (100 + 30) * 10 = 1300
@@ -9,6 +9,13 @@ const QuizResults = ({ score, totalQuestions, onRetry, onClose }) => {
 
     return (
         <div className="text-center py-8">
+            <Confetti
+                width={window.innerWidth}
+                height={window.innerHeight}
+                recycle={false}
+                numberOfPieces={500}
+                gravity={0.2}
+            />
             <div className="flex justify-center mb-6">
                 <div className="relative">
                     <Trophy className="w-24 h-24 text-yellow-500 drop-shadow-lg" />

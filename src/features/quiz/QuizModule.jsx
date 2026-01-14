@@ -22,7 +22,9 @@ const QuizModule = ({ diagnosis, difficulty, onClose }) => {
             setGameState('PLAYING');
         } catch (err) {
             console.error("Failed to load quiz", err);
-            setError("No se pudo generar el quiz. Intenta nuevamente.");
+            // Firebase HttpsError wraps custom details in 'details' property
+            const serverMessage = err.details?.details || err.details || err.message;
+            setError(`Error: ${JSON.stringify(serverMessage)}`);
             setGameState('START');
         }
     };

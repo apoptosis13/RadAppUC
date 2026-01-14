@@ -4,6 +4,7 @@ const admin = require("firebase-admin");
 const { Translate } = require("@google-cloud/translate").v2;
 const nodemailer = require('nodemailer');
 const cors = require('cors')({ origin: true });
+const { GoogleGenerativeAI } = require("@google/generative-ai");
 
 admin.initializeApp();
 const translate = new Translate();
@@ -404,35 +405,17 @@ exports.pingAI = functions.https.onCall((data, context) => {
 
 // --- AI-POWERED FINDINGS ANALYSIS ---
 exports.analyzeFindingsAI = functions.https.onCall(async (data, context) => {
-    // Check authentication
-    if (!context.auth) {
-        throw new functions.https.HttpsError(
-            'unauthenticated',
-            'Only authenticated users can request AI analysis.'
-        );
-    }
+    if (!context.auth) throw new functions.https.HttpsError('unauthenticated', 'Only authenticated users can request AI analysis.');
 
     const { userFindings, expertFindings, keywords } = data;
-
-    if (!userFindings || !expertFindings) {
-        throw new functions.https.HttpsError(
-            'invalid-argument',
-            'Missing required arguments: userFindings or expertFindings.'
-        );
-    }
+    if (!userFindings || !expertFindings) throw new functions.https.HttpsError('invalid-argument', 'Missing required arguments.');
 
     const apiKey = functions.config().gemini?.key;
-    if (!apiKey) {
-        console.error("Gemini API key is missing in functions config.");
-        return {
-            error: "AI_CONFIG_MISSING",
-            score: 0,
-            feedback: "El servicio de IA no está configurado en el servidor. Contacte al administrador."
-        };
-    }
+    if (!apiKey) return { error: "AI_CONFIG_MISSING", score: 0, feedback: "Servicio de IA no configurado." };
 
     try {
-        console.log("Starting AI analysis for findings...");
+        const genAI = new GoogleGenerativeAI(apiKey);
+        const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
 
         const prompt = `
             Eres un experto radiólogo asistiendo en la evaluación de residentes. 
@@ -442,56 +425,24 @@ exports.analyzeFindingsAI = functions.https.onCall(async (data, context) => {
             Hallazgos del Experto: "${expertFindings}"
             Palabras Clave Sugeridas: ${keywords ? keywords.join(", ") : "N/A"}
             
-            Evalúa la precisión semántica y clínica, no solo la coincidencia exacta de palabras.
-            Responde estrictamente en formato JSON con la siguiente estructura:
+            Evalúa la precisión semántica y clínica.
+            Responde estrictamente en formato JSON:
             {
-                "score": (número entre 0 y 1, donde 1 es perfecto),
-                "matches": ["concepto detectado 1", "concepto detectado 2"],
-                "misses": ["concepto omitido importante 1"],
-                "feedback": "Breve comentario constructivo en español (máximo 2 frases)."
+                "score": (número entre 0 y 1),
+                "matches": ["match1", "match2"],
+                "misses": ["miss1"],
+                "feedback": "Breve comentario."
             }
         `;
 
-        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                contents: [{ parts: [{ text: prompt }] }],
-                generationConfig: { responseMimeType: "application/json" }
-            })
-        });
+        const result = await model.generateContent(prompt, { generationConfig: { responseMimeType: "application/json" } });
+        const responseText = result.response.text();
 
-        functions.logger.log("Gemini API call made. Status:", response.status);
-
-        if (!response.ok) {
-            const errorText = await response.text();
-            console.error("Gemini REST API Error Response:", errorText);
-            throw new Error(`Error de la API de Gemini (${response.status})`);
-        }
-
-        const result = await response.json();
-
-        if (!result.candidates || !result.candidates[0]?.content?.parts[0]?.text) {
-            console.error("Unexpected Gemini response structure:", JSON.stringify(result));
-            throw new Error("Respuesta inesperada de la IA.");
-        }
-
-        const responseText = result.candidates[0].content.parts[0].text;
-
-        try {
-            return JSON.parse(responseText);
-        } catch (parseError) {
-            console.error("JSON Parse Error:", parseError, "Response text:", responseText);
-            throw new Error("La IA devolvió un formato inválido.");
-        }
+        return JSON.parse(responseText);
 
     } catch (error) {
-        console.error("Gemini AI Error:", error);
-        return {
-            error: "AI_EXECUTION_FAILED",
-            message: error.message || "Error desconocido en la ejecución de la IA",
-            details: error.toString()
-        };
+        console.error("Gemini AI SDK Error:", error);
+        return { error: "AI_EXECUTION_FAILED", message: error.message };
     }
 });
 
@@ -499,46 +450,28 @@ exports.analyzeFindingsAI = functions.https.onCall(async (data, context) => {
 exports.analyzeFindingsAI_http = functions.https.onRequest((req, res) => {
     return cors(req, res, async () => {
         try {
-            // Manual Auth check (using ID Token in Authorization header)
             const idToken = req.headers.authorization?.split('Bearer ')[1];
-            if (!idToken) {
-                return res.status(401).send({ error: "UNAUTHENTICATED" });
-            }
+            if (!idToken) return res.status(401).send({ error: "UNAUTHENTICATED" });
 
-            // Verify token
-            const decodedToken = await admin.auth().verifyIdToken(idToken);
-            if (!decodedToken) {
-                return res.status(401).send({ error: "INVALID_AUTH" });
-            }
+            await admin.auth().verifyIdToken(idToken); // simple verify
 
             const { userFindings, expertFindings, keywords } = req.body.data || {};
-            if (!userFindings || !expertFindings) {
-                return res.status(400).send({ error: "MISSING_DATA" });
-            }
+            if (!userFindings || !expertFindings) return res.status(400).send({ error: "MISSING_DATA" });
 
             const apiKey = functions.config().gemini?.key;
-            if (!apiKey) {
-                return res.status(500).send({ error: "AI_CONFIG_MISSING" });
-            }
+            if (!apiKey) return res.status(500).send({ error: "AI_CONFIG_MISSING" });
+
+            const genAI = new GoogleGenerativeAI(apiKey);
+            const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
 
             const prompt = `Evalúa estos hallazgos:\nAlumno: ${userFindings}\nExperto: ${expertFindings}\nResponde JSON {score, matches, misses, feedback}`;
 
-            const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    contents: [{ parts: [{ text: prompt }] }],
-                    generationConfig: { responseMimeType: "application/json" }
-                })
-            });
+            const result = await model.generateContent(prompt, { generationConfig: { responseMimeType: "application/json" } });
+            let responseText = result.response.text();
 
-            if (!response.ok) {
-                const err = await response.text();
-                return res.status(500).send({ error: "AI_API_ERROR", details: err });
-            }
+            // Sanitize response
+            responseText = responseText.replace(/```json/g, '').replace(/```/g, '').trim();
 
-            const result = await response.json();
-            const responseText = result.candidates[0].content.parts[0].text;
             res.json({ data: JSON.parse(responseText) });
 
         } catch (error) {
@@ -549,103 +482,60 @@ exports.analyzeFindingsAI_http = functions.https.onRequest((req, res) => {
 });
 
 // --- AI QUIZ GENERATION ---
-exports.generateQuizAI = functions.https.onCall(async (data, context) => {
-    // Check authentication
-    if (!context.auth) {
-        throw new functions.https.HttpsError(
-            'unauthenticated',
-            'Only authenticated users can generate quizzes.'
-        );
-    }
-
+exports.generateQuizAI_v2 = functions.https.onCall(async (data, context) => {
+    if (!context.auth) throw new functions.https.HttpsError('unauthenticated', 'Only authenticated users.');
     const { diagnosis, difficulty } = data;
-
-    if (!diagnosis) {
-        throw new functions.https.HttpsError(
-            'invalid-argument',
-            'The function must be called with a "diagnosis" (pathology) argument.'
-        );
-    }
+    if (!diagnosis) throw new functions.https.HttpsError('invalid-argument', 'Missing diagnosis.');
 
     const apiKey = functions.config().gemini?.key;
-    if (!apiKey) {
-        console.error("Gemini API key is missing in functions config.");
-        throw new functions.https.HttpsError(
-            'failed-precondition',
-            'AI Service not configured.'
-        );
-    }
+    if (!apiKey) throw new functions.https.HttpsError('failed-precondition', 'AI Not Configured');
 
-    // Map difficulty to Resident Year/Complexity
-    let contextStr = "Residente de Radiología de 1er año (Conceptos básicos, anatomía, signos típicos).";
-    if (difficulty === 'Intermediate') {
-        contextStr = "Residente de Radiología de 2do año (Diagnóstico diferencial, variantes, complicaciones).";
-    } else if (difficulty === 'Advanced') {
-        contextStr = "Residente de Radiología de 3er año o Fellow (Casos complejos, manejo, estadificación, diagnóstico diferencial fino).";
-    }
+    let contextStr = "Residente de Radiología de 1er año.";
+    if (difficulty === 'Intermediate') contextStr = "Residente de Radiología de 2do año.";
+    else if (difficulty === 'Advanced') contextStr = "Residente de Radiología de 3er año o Fellow.";
 
     const prompt = `
-        Actúa como un profesor experto en Radiología.
-        Genera un quiz de 10 preguntas de selección múltiple sobre la patología: "${diagnosis}".
-        Nivel: ${contextStr}
+        Actúa como un profesor experto en Radiología de nivel Fellow/Subespecialista.
+        Genera un quiz de 10 preguntas de selección múltiple sobre: "${diagnosis}".
+        Nivel del alumno: ${contextStr}
 
-        Requisitos:
-        1. Las preguntas deben ser desafiantes y educativas.
-        2. Enfócate en hallazgos por imagen, diagnóstico diferencial, asociaciones clínicas y fisiopatología relevante para la imagen.
-        3. 4 alternativas por pregunta.
-        4. Solo una alternativa correcta.
-        5. Proporciona una explicación breve de por qué la correcta es correcta.
-
-        Responde ESTRICTAMENTE en este formato JSON Array:
-        [
-            {
-                "question": "Texto de la pregunta",
-                "options": ["Opción A", "Opción B", "Opción C", "Opción D"],
-                "correctAnswer": 0, // Índice de la respuesta correcta (0-3)
-                "explanation": "Explicación breve"
-            },
-            ...
-        ]
+        Requisitos Críticos:
+        1. Precisión Académica: Las preguntas deben ser técnicamente rigurosas.
+        2. Consistencia Lógica (CRÍTICO): El índice 'correctAnswer' DEBE coincidir inequívocamente con la opción correcta descrita en 'explanation'.
+        3. Explicación: La 'explanation' debe especificar explícitamente por qué la opción correcta es la correcta y por qué las demás son erróneas.
+        4. Formato: JSON Array estricto: [{ "question": "...", "options": ["..."], "correctAnswer": 0, "explanation": "..." }]
+        5. Lenguaje: Español técnico médico natural (Chile).
     `;
 
     try {
-        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                contents: [{ parts: [{ text: prompt }] }],
-                generationConfig: {
-                    responseMimeType: "application/json",
-                    temperature: 0.7
-                }
-            })
-        });
+        const genAI = new GoogleGenerativeAI(apiKey);
+        const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
 
-        if (!response.ok) {
-            const errorText = await response.text();
-            console.error("Gemini API Error:", errorText);
-            throw new Error(`Gemini API Error: ${response.status}`);
-        }
+        const result = await model.generateContent(prompt, { generationConfig: { responseMimeType: "application/json" } });
+        let responseText = result.response.text();
 
-        const result = await response.json();
+        // Sanitize response: remove markdown code fences if present
+        responseText = responseText.replace(/```json/g, '').replace(/```/g, '').trim();
 
-        if (!result.candidates || !result.candidates[0]?.content?.parts[0]?.text) {
-            throw new Error("No content in Gemini response");
-        }
-
-        const responseText = result.candidates[0].content.parts[0].text;
-
-        // Ensure it's valid JSON
-        const quizData = JSON.parse(responseText);
-
-        return { quiz: quizData };
+        return { quiz: JSON.parse(responseText) };
 
     } catch (error) {
         console.error("Generate Quiz Error:", error);
+
+        // Diagnostic: List available models if 404 occurs
+        let availableModels = "Unknown";
+        try {
+            const listResp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`);
+            const listData = await listResp.json();
+            availableModels = listData.models ? listData.models.map(m => m.name).join(", ") : JSON.stringify(listData);
+        } catch (listErr) {
+            availableModels = "Failed to list: " + listErr.message;
+        }
+
         throw new functions.https.HttpsError(
             'internal',
-            'Failed to generate quiz.',
-            { details: error.message }
+            `Failed. Error: ${error.message}. Available Models: ${availableModels}`,
+            { details: error.message, models: availableModels }
         );
     }
 });

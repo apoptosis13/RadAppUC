@@ -17,16 +17,7 @@ const InstructorDashboard = () => {
             border: 'border-blue-500/20',
             hover: 'hover:border-blue-500/50'
         },
-        {
-            title: t('instructor.createCase'),
-            description: 'Crear nuevos casos clínicos para los alumnos.',
-            icon: PlusCircle,
-            href: '/instructor/cases/create',
-            color: 'text-green-400',
-            bg: 'bg-green-500/10',
-            border: 'border-green-500/20',
-            hover: 'hover:border-green-500/50'
-        },
+
         {
             title: 'Gestión de Anatomía',
             description: 'Administrar módulos de anatomía y anotaciones.',

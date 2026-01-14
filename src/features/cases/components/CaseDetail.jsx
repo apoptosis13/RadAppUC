@@ -4,7 +4,7 @@ import { caseService } from '../../../services/caseService';
 import ImageViewer from '../../anatomy/components/ImageViewer';
 import CaseQuestions from './CaseQuestions';
 import DiagnosisForm from './DiagnosisForm';
-import { ArrowLeft, AlertCircle, Brain } from 'lucide-react';
+import { ArrowLeft, AlertCircle, Brain, Info } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import i18n from '../../../i18n';
 import QuizModule from '../../quiz/QuizModule';
@@ -110,13 +110,27 @@ const CaseDetail = () => {
 
             <div className="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-0 overflow-hidden h-[calc(100vh-80px)]">
                 {/* Left Column - Image (Main Stage) */}
-                <div className="lg:col-span-8 bg-black relative flex items-center justify-center border-r border-gray-800">
-                    <div className="w-full h-full p-4">
+                <div className="lg:col-span-8 bg-black relative flex flex-col border-r border-gray-800">
+                    <div className="flex-1 w-full relative overflow-hidden p-4">
                         <ImageViewer
                             images={caseItem.images || (caseItem.image ? [caseItem.image] : [])}
+                            imageStacks={caseItem.imageStacks || []}
                             alt={caseItem.title || t(caseItem.titleKey)}
                         />
                     </div>
+
+                    {/* Case Comments - Moved Here */}
+                    {isDiagnosisSubmitted && caseItem.caseComments && (
+                        <div className="bg-gray-900/90 border-t border-gray-800 p-6 animate-in slide-in-from-bottom duration-500 max-h-[30vh] overflow-y-auto custom-scrollbar">
+                            <h3 className="text-sm font-bold text-yellow-400 mb-2 flex items-center uppercase tracking-wider">
+                                <Info className="w-4 h-4 mr-2" />
+                                Comentarios del Caso
+                            </h3>
+                            <p className="text-gray-300 leading-relaxed text-sm whitespace-pre-line max-w-4xl">
+                                {caseItem.caseComments}
+                            </p>
+                        </div>
+                    )}
                 </div>
 
                 {/* Right Column - Info & Tools (Sidebar) */}
@@ -191,7 +205,7 @@ const CaseDetail = () => {
                         )}
 
                         {/* Questions */}
-                        {((i18n.language === 'en' && caseItem.questions_en) || caseItem.questions) &&
+                        {!caseItem.hideManualQuestions && ((i18n.language === 'en' && caseItem.questions_en) || caseItem.questions) &&
                             (((i18n.language === 'en' && caseItem.questions_en) || caseItem.questions).length > 0) && (
                                 <div className="mt-8 pt-6 border-t border-gray-800">
                                     <CaseQuestions

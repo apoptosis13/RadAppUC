@@ -78,6 +78,9 @@ const EditCasePage = () => {
                     if (!initialData.diagnosisAliases) {
                         initialData.diagnosisAliases = [];
                     }
+                    if (initialData.hideManualQuestions === undefined) {
+                        initialData.hideManualQuestions = false;
+                    }
                     setFormData(initialData);
                 } else {
                     alert(t('cases.notFound'));
@@ -94,8 +97,11 @@ const EditCasePage = () => {
     }, [id, navigate, t]);
 
     const handleChange = (e) => {
-        const { name, value } = e.target;
-        setFormData(prev => ({ ...prev, [name]: value }));
+        const { name, value, type, checked } = e.target;
+        setFormData(prev => ({
+            ...prev,
+            [name]: type === 'checkbox' ? checked : value
+        }));
     };
 
     const compressImage = (file) => {
@@ -542,14 +548,26 @@ const EditCasePage = () => {
                     <div className="col-span-2 border-t pt-6 mt-6">
                         <div className="flex items-center justify-between mb-4">
                             <h3 className="text-lg font-medium text-gray-900 dark:text-white">Preguntas de Alternativas</h3>
-                            <button
-                                type="button"
-                                onClick={handleAddQuestion}
-                                className="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-md text-indigo-700 bg-indigo-100 hover:bg-indigo-200 dark:bg-indigo-900 dark:text-indigo-300"
-                            >
-                                <Plus className="w-4 h-4 mr-1" />
-                                Añadir Pregunta
-                            </button>
+                            <div className="flex items-center space-x-4">
+                                <label className="inline-flex items-center cursor-pointer">
+                                    <input
+                                        type="checkbox"
+                                        name="hideManualQuestions"
+                                        checked={formData.hideManualQuestions}
+                                        onChange={handleChange}
+                                        className="form-checkbox h-4 w-4 text-indigo-600 transition duration-150 ease-in-out"
+                                    />
+                                    <span className="ml-2 text-sm text-gray-700 dark:text-gray-300">Ocultar en Visualizador (Solo Quiz IA)</span>
+                                </label>
+                                <button
+                                    type="button"
+                                    onClick={handleAddQuestion}
+                                    className="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-md text-indigo-700 bg-indigo-100 hover:bg-indigo-200 dark:bg-indigo-900 dark:text-indigo-300"
+                                >
+                                    <Plus className="w-4 h-4 mr-1" />
+                                    Añadir Pregunta
+                                </button>
+                            </div>
                         </div>
                         <div className="space-y-4">
                             {formData.questions.map((question, qIndex) => (

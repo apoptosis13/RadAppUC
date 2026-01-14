@@ -11,7 +11,6 @@ const InstructorLayout = () => {
     const { logout, user } = useAuth();
 
     const navigation = [
-        { name: t('instructor.createCase'), href: '/instructor/cases/create', icon: PlusCircle, color: 'green' },
         { name: t('instructor.manageCases'), href: '/instructor/cases', icon: FileText, color: 'blue' },
         { name: 'Anatomía', href: '/instructor/anatomy', icon: Brain, color: 'purple' },
         { name: t('instructor.users.title'), href: '/instructor/users', icon: Users, color: 'orange' },

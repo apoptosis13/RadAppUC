@@ -17,12 +17,20 @@ export const normalizeString = (str) => {
  * @returns {string[]}
  */
 const tokenize = (str) => {
-    const stopWords = ['de', 'del', 'el', 'la', 'los', 'las', 'en', 'un', 'una', 'y', 'o', 'con', 'sin', 'por', 'para'];
+    const stopWords = ['de', 'del', 'el', 'la', 'los', 'las', 'en', 'un', 'una', 'y', 'o', 'por', 'para'];
 
     // Anatomical synonyms map
     const synonyms = {
         'interno': 'medial',
-        'externo': 'lateral'
+        'externo': 'lateral',
+        'rotura': 'desgarro',
+        'fractura': 'fx',
+        'quiste': 'lesion quistica',
+        'tumor': 'masa',
+        'tendinosis': 'tendinopatia',
+        'tendinitis': 'tendinopatia',
+        'derrame': 'liquido',
+        'edema': 'liquido'
     };
 
     let normalized = normalizeString(str);

@@ -116,18 +116,7 @@ const DiagnosisForm = ({ correctDiagnosis, caseData, onComplete }) => {
                         </div>
                     </div>
 
-                    {/* Case Comments Section */}
-                    {caseData.caseComments && (
-                        <div className="bg-yellow-900/20 p-4 rounded-lg border border-yellow-500/20">
-                            <h4 className="text-sm font-medium text-yellow-400 mb-2 flex items-center">
-                                <Info className="w-4 h-4 mr-2" />
-                                Comentarios del Caso
-                            </h4>
-                            <p className="text-sm text-yellow-200/80 whitespace-pre-line leading-relaxed">
-                                {caseData.caseComments}
-                            </p>
-                        </div>
-                    )}
+
 
                     <button
                         onClick={() => {
