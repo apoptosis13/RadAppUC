@@ -105,6 +105,22 @@
       "close": "Cerrar"
     }
   },
+  "quiz": {
+    "anatomyChallenge": "Desafío de Anatomía",
+    "startQuiz": "Desafío de Anatomía",
+    "chooseMode": "Selecciona tu modo de juego",
+    "modeIdentify": "Identificar Estructura",
+    "modeLocate": "Localizar Estructura",
+    "correct": "¡Correcto!",
+    "incorrect": "Incorrecto. Era: ",
+    "timeOut": "¡Tiempo Agotado!",
+    "completed": "¡Quiz Completado!",
+    "playAgain": "Jugar de Nuevo",
+    "notEnoughData": "No hay suficientes estructuras para un quiz.",
+    "identifyQuestion": "¿Qué estructura está señalada?",
+    "typeStructure": "Escribe el nombre de la estructura...",
+    "submit": "Confirmar"
+  },
   "cases": {
     "pageTitle": "Biblioteca de Casos",
     "all": "Todos",

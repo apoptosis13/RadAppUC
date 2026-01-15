@@ -21,7 +21,8 @@ import {
     PanelLeft,
     PanelRight,
     Info, // Added Info icon
-    Hexagon // Added Hexagon icon for Zones
+    Hexagon, // Added Hexagon icon for Zones
+    Trophy // Added Trophy icon for Quiz
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { getSmoothPath } from '../../../utils/svgUtils';
@@ -42,7 +43,22 @@ const ANATOMY_CATEGORIES = [
     { id: 'nerves', color: '#FBBF24', icon: Zap },
 ];
 
-const AnatomyInteractiveViewer = ({ module, className, onBack }) => {
+const AnatomyInteractiveViewer = ({
+    module,
+    className,
+    onBack,
+    // --- New Props for Quiz Mode ---
+    controlledSelection = false, // If true, selection is driven by props
+    selectedId = null,           // External selection ID
+    onAnnotationClick = null,    // External click handler
+    hideLabels = false,          // Hide text labels (for Identify Mode)
+    highlightColor = null,       // Optional override color
+    onStartQuiz = null,          // Callback to start quiz
+    forceSlice = null,           // Force specific slice index
+    forceSeriesId = null,        // Force specific series ID
+    isHighIntensity = false,     // Use pulsing highlight
+    dimUnselected = false        // Dim non-selected items (Isolation Mode)
+}) => {
     const { t, i18n } = useTranslation();
     const currentLang = i18n.language;
 
@@ -65,6 +81,9 @@ const AnatomyInteractiveViewer = ({ module, className, onBack }) => {
         ANATOMY_CATEGORIES.reduce((acc, cat) => ({ ...acc, [cat.id]: true }), {})
     );
     const [selectedAnnotationId, setSelectedAnnotationId] = useState(null);
+
+    // Resolve effective selection based on mode
+    const effectiveSelectedId = controlledSelection ? selectedId : selectedAnnotationId;
     const [isFullscreen, setIsFullscreen] = useState(false);
     const [viewMode, setViewMode] = useState('default'); // 'default' | 'atlas'
 
@@ -150,6 +169,16 @@ const AnatomyInteractiveViewer = ({ module, className, onBack }) => {
             }
         };
     }, [currentImageUrl, activeSeriesId]);
+
+    // Handle External Force Navigation (Quiz)
+    useEffect(() => {
+        if (forceSeriesId && forceSeriesId !== activeSeriesId) {
+            setActiveSeriesId(forceSeriesId);
+        }
+        if (forceSlice !== null && forceSlice !== undefined && forceSlice !== currentImageIndex) {
+            setCurrentImageIndex(forceSlice);
+        }
+    }, [forceSlice, forceSeriesId]);
 
 
     const activeSeries = module?.series?.find(s => s.id === activeSeriesId) ||
@@ -275,7 +304,7 @@ const AnatomyInteractiveViewer = ({ module, className, onBack }) => {
             const category = ANATOMY_CATEGORIES.find(c => c.id === ann.category);
             const color = category?.color || '#fff';
             const { x, y } = project(ann);
-            const isSelected = selectedAnnotationId === ann.id;
+            const isSelected = effectiveSelectedId === ann.id;
             const label = (currentLang === 'en' && ann.labelEn) ? ann.labelEn : ann.label;
 
 
@@ -288,7 +317,8 @@ const AnatomyInteractiveViewer = ({ module, className, onBack }) => {
                         style={{ cursor: 'pointer' }}
                         onClick={(e) => {
                             e.stopPropagation();
-                            setSelectedAnnotationId(ann.id);
+                            if (onAnnotationClick) onAnnotationClick(ann);
+                            if (!controlledSelection) setSelectedAnnotationId(ann.id);
                         }}
                     >
                         <path
@@ -305,7 +335,7 @@ const AnatomyInteractiveViewer = ({ module, className, onBack }) => {
                             transform={`scale(${naturalSize.width / 100} ${naturalSize.height / 100})`}
                         />
                         {/* Centroid Label/Dot if selected? Maybe yes */}
-                        {isSelected && (
+                        {isSelected && !hideLabels && (
                             <text
                                 x={x} y={y}
                                 textAnchor="middle"
@@ -335,7 +365,7 @@ const AnatomyInteractiveViewer = ({ module, className, onBack }) => {
             const baseRadius = (naturalSize.width / sizeFactor) / viewport.scale;
             // If Atlas Mode, we DO NOT render text here. We render it in overlay.
             // If Normal Mode, we render text if selected.
-            const showText = isSelected && viewMode !== 'atlas';
+            const showText = isSelected && viewMode !== 'atlas' && !hideLabels;
 
             return (
                 <g
@@ -343,16 +373,18 @@ const AnatomyInteractiveViewer = ({ module, className, onBack }) => {
                     style={{ cursor: 'pointer' }}
                     onClick={(e) => {
                         e.stopPropagation();
-                        setSelectedAnnotationId(ann.id);
+                        if (onAnnotationClick) onAnnotationClick(ann);
+                        if (!controlledSelection) setSelectedAnnotationId(ann.id);
                     }}
                 >
                     <circle
                         cx={x} cy={y}
                         r={isSelected ? baseRadius * 1.5 : baseRadius}
                         fill={color}
-                        opacity={isSelected ? 1 : 0.5}
+                        opacity={dimUnselected ? (isSelected ? 1 : 0.1) : (isSelected ? 1 : 0.5)}
                         stroke="white"
                         strokeWidth={isSelected ? baseRadius * 0.3 : baseRadius * 0.2}
+                        className={isSelected && isHighIntensity ? 'animate-pulse' : ''}
                     />
                     {showText && (
                         <text
@@ -450,23 +482,25 @@ const AnatomyInteractiveViewer = ({ module, className, onBack }) => {
                                 fill="none"
                             />
                             <circle cx={item.screenX} cy={item.screenY} r="2" fill={item.color} />
-                            <text
-                                x={textX}
-                                y={item.textY - 3} // Shift text up so line acts as underline
-                                textAnchor={textAnchor}
-                                fill={item.color}
-                                fontSize={fontSize}
-                                fontWeight="normal"
-                                style={{
-                                    paintOrder: 'stroke',
-                                    stroke: '#000000', // Black halo
-                                    strokeWidth: '4px', // Thick enough to hide line
-                                    strokeLinecap: 'round',
-                                    strokeLinejoin: 'round'
-                                }}
-                            >
-                                {item.label}
-                            </text>
+                            {!hideLabels && (
+                                <text
+                                    x={textX}
+                                    y={item.textY - 3} // Shift text up so line acts as underline
+                                    textAnchor={textAnchor}
+                                    fill={item.color}
+                                    fontSize={fontSize}
+                                    fontWeight="normal"
+                                    style={{
+                                        paintOrder: 'stroke',
+                                        stroke: '#000000', // Black halo
+                                        strokeWidth: '4px', // Thick enough to hide line
+                                        strokeLinecap: 'round',
+                                        strokeLinejoin: 'round'
+                                    }}
+                                >
+                                    {item.label}
+                                </text>
+                            )}
                             {/* Invisible interactive area for easier clicking */}
                             <rect
                                 x={item.isRight ? textX - (item.label.length * fontSize * 0.6) : textX}
@@ -480,7 +514,8 @@ const AnatomyInteractiveViewer = ({ module, className, onBack }) => {
                                 }}
                                 onClick={(e) => {
                                     e.stopPropagation();
-                                    setSelectedAnnotationId(item.id);
+                                    if (onAnnotationClick) onAnnotationClick(item); // Note: item is simplified ann
+                                    if (!controlledSelection) setSelectedAnnotationId(item.id);
                                 }}
                             />
                         </g>
@@ -586,7 +621,7 @@ const AnatomyInteractiveViewer = ({ module, className, onBack }) => {
     if (!activeSeries || !isImageLoaded) return <div className="text-white text-center p-10">{t('anatomy.viewer.loading')}</div>;
 
     return (
-        <div ref={containerRef} className={`flex flex-col bg-black relative overflow-hidden ${isFullscreen ? 'fixed inset-0 z-50 h-screen w-screen' : (className || 'h-full')}`}>
+        <div ref={containerRef} className={`flex flex-col bg-gray-950 relative overflow-hidden ${isFullscreen ? 'fixed inset-0 z-50 h-screen w-screen' : (className || 'h-full')}`}>
             {/* Toolbar */}
             <div className="bg-gray-900 border-b border-gray-800 p-2 flex justify-between items-center z-40">
                 <div className="flex items-center space-x-4">
@@ -608,7 +643,20 @@ const AnatomyInteractiveViewer = ({ module, className, onBack }) => {
                         {module.title} - <span className="text-gray-400">{activeSeries.name.replace('Sagittal', 'Sagital')}</span>
                     </h2>
                 </div>
-                <div className="flex space-x-2 relative">
+                <div className="flex items-center space-x-2 relative">
+                    {onStartQuiz && (
+                        <button
+                            onClick={() => onStartQuiz()}
+                            className="flex items-center space-x-2 px-4 py-1.5 rounded-full transition-all duration-200 border bg-indigo-600 border-indigo-500 text-white shadow-lg hover:bg-indigo-700 hover:scale-105 active:scale-95"
+                            title={t('quiz.startQuiz', 'Desafío de Anatomía')}
+                        >
+                            <Trophy className="w-4 h-4 text-yellow-300" />
+                            <span className="text-xs font-bold uppercase tracking-wide">Desafío</span>
+                        </button>
+                    )}
+
+                    <div className="w-px h-6 bg-gray-700 mx-1" />
+
                     <button
                         onClick={() => setShowAdjustments(!showAdjustments)}
                         className={`p-1.5 rounded transition-colors ${showAdjustments ? 'bg-gray-800 text-white' : 'text-gray-400 hover:text-white hover:bg-gray-800'}`}
@@ -760,7 +808,8 @@ const AnatomyInteractiveViewer = ({ module, className, onBack }) => {
                                     const dx = Math.abs(e.clientX - dragStartPos.current.x);
                                     const dy = Math.abs(e.clientY - dragStartPos.current.y);
                                     if (dx < 5 && dy < 5) {
-                                        setSelectedAnnotationId(null);
+                                        if (onAnnotationClick) onAnnotationClick(null);
+                                        if (!controlledSelection) setSelectedAnnotationId(null);
                                     }
                                 }}
                                 style={{ cursor: isDragging ? 'grabbing' : 'grab' }}
@@ -795,7 +844,10 @@ const AnatomyInteractiveViewer = ({ module, className, onBack }) => {
 
                         {/* Selected Annotation Description Overlay */}
                         {(() => {
-                            const selectedAnn = annotations.find(a => a.id === selectedAnnotationId);
+                            // Hide description in Quiz Mode (usually)
+                            if (hideLabels) return null;
+
+                            const selectedAnn = annotations.find(a => a.id === effectiveSelectedId);
                             const desc = selectedAnn ? ((currentLang === 'en' && selectedAnn.descriptionEn) ? selectedAnn.descriptionEn : selectedAnn.description) : null;
 
                             if (selectedAnn && desc) {

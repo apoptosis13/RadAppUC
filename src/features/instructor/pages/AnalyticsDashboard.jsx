@@ -8,8 +8,9 @@ import {
 import { activityLogService } from '../../../services/activityLogService';
 import { caseService } from '../../../services/caseService';
 import { anatomyService } from '../../../services/anatomyService';
+import { statsService } from '../../../services/statsService';
 import { useAuth } from '../../../context/AuthContext';
-import { Shield, TrendingUp, Users, Activity, X, BookOpen, Map as MapIcon, Clock, AlertCircle } from 'lucide-react';
+import { Shield, TrendingUp, Users, Activity, X, BookOpen, Map as MapIcon, Clock, AlertCircle, Trophy, Eye, ChevronRight } from 'lucide-react';
 
 const COLORS = [
     '#6366f1', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6',
@@ -36,9 +37,22 @@ const AnalyticsDashboard = () => {
         topModules: [],
         topStudents: [],
         errorRate: 0,
-        inventory: { cases: 0, modules: 0 }
+        inventory: { cases: 0, modules: 0 },
+        quizStats: {
+            totalPlayed: 0,
+            avgScore: 0,
+            leaderboard: [],
+            distribution: []
+        },
+        allUsers: []
     });
     const [showOnlineModal, setShowOnlineModal] = useState(false);
+
+    // User Detail State
+    const [selectedUser, setSelectedUser] = useState(null);
+    const [userHistory, setUserHistory] = useState([]);
+    const [showUserModal, setShowUserModal] = useState(false);
+    const [historyLoading, setHistoryLoading] = useState(false);
 
     const [errorMsg, setErrorMsg] = useState(null);
 
@@ -181,9 +195,51 @@ const AnalyticsDashboard = () => {
             ...data
         })).sort((a, b) => b.lastActive - a.lastActive);
 
+        // 6. Anatomical Quiz Stats from Logs
+        const quizLogs = logs.filter(l => l.action === 'COMPLETE_ANATOMY_QUIZ');
+        const totalPlayed = quizLogs.length;
+        const totalScore = quizLogs.reduce((acc, l) => acc + (l.details?.score || 0), 0);
+        const avgScore = totalPlayed > 0 ? Math.round(totalScore / totalPlayed) : 0;
+
+        const leaderboard = quizLogs
+            .map(l => ({
+                uid: l.uid,
+                email: l.email,
+                user: l.displayName || l.email,
+                score: l.details?.score || 0,
+                module: l.details?.moduleTitle || 'Desconocido',
+                date: new Date(l.timestamp).toLocaleDateString()
+            }))
+            .sort((a, b) => b.score - a.score)
+            .slice(0, 10);
+
+        // 7. Extract Unique Users for List
+        const usersMap = new Map();
+        logs.forEach(log => {
+            if (log.email && !usersMap.has(log.email)) {
+                usersMap.set(log.email, {
+                    uid: log.uid, // May be undefined in old logs, but needed for fetching history
+                    email: log.email,
+                    displayName: log.displayName || log.email.split('@')[0],
+                    lastActive: new Date(log.timestamp)
+                });
+            } else if (log.email && usersMap.has(log.email)) {
+                // Update last active if newer
+                const existing = usersMap.get(log.email);
+                const current = new Date(log.timestamp);
+                if (current > existing.lastActive) {
+                    existing.lastActive = current;
+                    // Try to capture UID if we missed it before
+                    if (!existing.uid && log.uid) existing.uid = log.uid;
+                    usersMap.set(log.email, existing);
+                }
+            }
+        });
+        const allUsers = Array.from(usersMap.values()).sort((a, b) => b.lastActive - a.lastActive);
+
         setStats({
             totalActions: logs.length,
-            activeUsers: new Set(logs.map(l => l.email).filter(Boolean)).size,
+            activeUsers: usersMap.size,
             onlineCount: onlineUsersList.length,
             onlineUsersList,
             actionDistribution,
@@ -194,8 +250,33 @@ const AnalyticsDashboard = () => {
             topModules,
             topStudents,
             errorRate,
-            inventory: { cases: cases.length, modules: modules.length }
+            inventory: { cases: cases.length, modules: modules.length },
+            quizStats: {
+                totalPlayed,
+                avgScore,
+                leaderboard
+            }
         });
+    };
+
+
+
+    const handleViewUser = async (user) => {
+        if (!user.uid) {
+            alert("Este usuario no tiene un ID registrado en los logs nuevos, no se puede buscar su historial.");
+            return;
+        }
+        setSelectedUser(user);
+        setHistoryLoading(true);
+        setShowUserModal(true);
+        try {
+            const history = await statsService.getHistory(user.uid, 50);
+            setUserHistory(history);
+        } catch (error) {
+            console.error("Error fetching user history", error);
+        } finally {
+            setHistoryLoading(false);
+        }
     };
 
     const parseUserAgent = (ua) => {
@@ -248,6 +329,12 @@ const AnalyticsDashboard = () => {
                             className={`px-4 py-2 text-sm font-medium rounded-md transition-all ${activeTab === 'users' ? 'bg-white shadow-sm text-indigo-600' : 'text-gray-500 hover:text-gray-700'}`}
                         >
                             Estadísticas de Usuarios
+                        </button>
+                        <button
+                            onClick={() => setActiveTab('quizzes')}
+                            className={`px-4 py-2 text-sm font-medium rounded-md transition-all ${activeTab === 'quizzes' ? 'bg-white shadow-sm text-indigo-600' : 'text-gray-500 hover:text-gray-700'}`}
+                        >
+                            Evaluaciones
                         </button>
                     </div>
                 </div>
@@ -506,6 +593,107 @@ const AnalyticsDashboard = () => {
                             </div>
                         </div>
                     </div>
+
+                    <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+                        <h3 className="text-sm font-semibold text-gray-700 mb-6 flex items-center uppercase tracking-wider">
+                            <Users className="w-5 h-5 mr-2 text-indigo-500" />
+                            Directorio de Usuarios ({stats.allUsers?.length || 0})
+                        </h3>
+                        <div className="overflow-x-auto">
+                            <table className="min-w-full divide-y divide-gray-200">
+                                <thead className="bg-gray-50">
+                                    <tr>
+                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Usuario</th>
+                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
+                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Última Actividad</th>
+                                        <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="bg-white divide-y divide-gray-200">
+                                    {stats.allUsers?.map((u, idx) => (
+                                        <tr key={idx} className="hover:bg-gray-50">
+                                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{u.displayName}</td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{u.email}</td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                                {u.lastActive.toLocaleDateString('es-CL')} {u.lastActive.toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit' })}
+                                            </td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                                                <button
+                                                    onClick={() => handleViewUser(u)}
+                                                    className="text-indigo-600 hover:text-indigo-900 flex items-center justify-end w-full"
+                                                >
+                                                    <Eye className="w-4 h-4 mr-1" />
+                                                    Ver Detalle
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                    {(!stats.allUsers || stats.allUsers.length === 0) && (
+                                        <tr>
+                                            <td colSpan="4" className="px-6 py-4 text-center text-sm text-gray-500">No hay usuarios registrados en los logs recientes.</td>
+                                        </tr>
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {activeTab === 'quizzes' && (
+                <div className="space-y-6 animate-in slide-in-from-bottom-4 duration-500">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div className="bg-white p-5 rounded-xl shadow-sm border border-gray-100">
+                            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Quizzes Completados</p>
+                            <h3 className="text-2xl font-bold text-gray-900 mt-1">{stats.quizStats.totalPlayed}</h3>
+                        </div>
+                        <div className="bg-white p-5 rounded-xl shadow-sm border border-gray-100">
+                            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Puntaje Promedio</p>
+                            <h3 className="text-2xl font-bold text-indigo-600 mt-1">{stats.quizStats.avgScore}</h3>
+                        </div>
+                    </div>
+
+                    <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+                        <h3 className="text-sm font-semibold text-gray-700 mb-6 flex items-center uppercase tracking-wider">
+                            <Trophy className="w-5 h-5 mr-2 text-yellow-500" />
+                            Tabla de Líderes (Top 10 Puntajes)
+                        </h3>
+                        <div className="overflow-x-auto">
+                            <table className="min-w-full divide-y divide-gray-200">
+                                <thead className="bg-gray-50">
+                                    <tr>
+                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Usuario</th>
+                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Módulo</th>
+                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Puntaje</th>
+                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fecha</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="bg-white divide-y divide-gray-200">
+                                    {stats.quizStats.leaderboard.map((entry, idx) => (
+                                        <tr
+                                            key={idx}
+                                            className="hover:bg-indigo-50 cursor-pointer transition-colors group"
+                                            onClick={() => handleViewUser({ uid: entry.uid, displayName: entry.user, email: entry.email })}
+                                            title="Ver historial completo del usuario"
+                                        >
+                                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 flex items-center">
+                                                <Eye className="w-3 h-3 mr-2 text-indigo-400 opacity-0 group-hover:opacity-100" />
+                                                {entry.user}
+                                            </td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{entry.module}</td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-indigo-600">{entry.score}</td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{entry.date}</td>
+                                        </tr>
+                                    ))}
+                                    {stats.quizStats.leaderboard.length === 0 && (
+                                        <tr>
+                                            <td colSpan="4" className="px-6 py-4 text-center text-sm text-gray-500">No hay registros de quizzes aún.</td>
+                                        </tr>
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
                 </div>
             )}
 
@@ -560,6 +748,77 @@ const AnalyticsDashboard = () => {
                                 className="px-6 py-2.5 bg-gray-900 text-white text-sm font-bold rounded-xl hover:bg-gray-800 shadow-md transition-all active:scale-95"
                             >
                                 Entendido
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {showUserModal && selectedUser && (
+                <div className="fixed inset-0 bg-black bg-opacity-60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+                    <div className="bg-white rounded-2xl p-6 max-w-4xl w-full shadow-2xl animate-in zoom-in duration-300 max-h-[90vh] flex flex-col">
+                        <div className="flex justify-between items-center mb-6 shrink-0">
+                            <div>
+                                <h3 className="text-xl font-bold text-gray-900 flex items-center">
+                                    <BookOpen className="w-6 h-6 mr-2 text-indigo-600" />
+                                    Historial de Evaluaciones
+                                </h3>
+                                <p className="text-sm text-gray-500 mt-1">
+                                    Usuario: <span className="font-semibold">{selectedUser.displayName}</span> ({selectedUser.email})
+                                </p>
+                            </div>
+                            <button onClick={() => setShowUserModal(false)} className="p-1 hover:bg-gray-100 rounded-lg text-gray-400">
+                                <X className="w-6 h-6" />
+                            </button>
+                        </div>
+
+                        <div className="flex-1 overflow-y-auto pr-2">
+                            {historyLoading ? (
+                                <div className="flex justify-center items-center h-48">
+                                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+                                </div>
+                            ) : userHistory.length > 0 ? (
+                                <table className="min-w-full divide-y divide-gray-200">
+                                    <thead className="bg-gray-50 sticky top-0">
+                                        <tr>
+                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actividad</th>
+                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Detalle</th>
+                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Puntaje</th>
+                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fecha</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="bg-white divide-y divide-gray-200">
+                                        {userHistory.map((h, idx) => (
+                                            <tr key={idx} className="hover:bg-gray-50">
+                                                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 capitalize">
+                                                    {h.type === 'anatomy' ? 'Quiz Anatomía' : 'Caso Clínico'}
+                                                </td>
+                                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                                    {h.moduleTitle || h.caseTitle || 'Sin título'}
+                                                </td>
+                                                <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-indigo-600">
+                                                    {h.score}%
+                                                </td>
+                                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                                    {h.timestamp ? new Date(h.timestamp.seconds * 1000).toLocaleString('es-CL') : 'N/A'}
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            ) : (
+                                <div className="text-center py-10">
+                                    <p className="text-gray-400 italic">No hay historial de evaluaciones registrado para este usuario.</p>
+                                </div>
+                            )}
+                        </div>
+
+                        <div className="mt-6 border-t border-gray-100 pt-4 flex justify-end shrink-0">
+                            <button
+                                onClick={() => setShowUserModal(false)}
+                                className="px-6 py-2.5 bg-gray-900 text-white text-sm font-bold rounded-xl hover:bg-gray-800 shadow-md transition-all active:scale-95"
+                            >
+                                Cerrar
                             </button>
                         </div>
                     </div>

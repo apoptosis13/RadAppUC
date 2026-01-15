@@ -3,7 +3,8 @@ import { useAuth } from '../context/AuthContext';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../context/ThemeContext';
 import { authService } from '../services/authService';
-import { User, Save, Camera, Upload, Check, Moon, Sun, Globe, Monitor, X, ZoomIn, ZoomOut } from 'lucide-react';
+import { statsService } from '../services/statsService';
+import { User, Save, Camera, Upload, Check, Moon, Sun, Globe, Monitor, X, ZoomIn, ZoomOut, Trophy, Activity, Shield } from 'lucide-react';
 import Cropper from 'react-easy-crop';
 import getCroppedImg from '../utils/canvasUtils';
 import { AVATAR_PRESETS } from '../utils/userConstants';
@@ -35,6 +36,12 @@ const ProfilePage = () => {
     const [croppedAreaPixels, setCroppedAreaPixels] = useState(null);
     const [showCropper, setShowCropper] = useState(false);
 
+    // Stats State
+    const [anatomyStats, setAnatomyStats] = useState({});
+    const [caseStats, setCaseStats] = useState({});
+    const [history, setHistory] = useState([]);
+    const [statsTab, setStatsTab] = useState('history'); // Default to history as requested? Or stick to anatomy. Let's default to anatomy or history. User asked for details. Let's default to history if they want to see "latest".
+
     // Initialize state from user object
     useEffect(() => {
         if (user) {
@@ -46,8 +53,22 @@ const ProfilePage = () => {
                     language: user.preferences?.language || i18n.language
                 }
             });
+            loadStats(user.uid);
         }
     }, [user, theme, i18n.language]);
+
+    const loadStats = async (uid) => {
+        try {
+            const aStats = await statsService.getAnatomyStats(uid);
+            const cStats = await statsService.getCaseStats(uid);
+            const hStats = await statsService.getHistory(uid);
+            setAnatomyStats(aStats);
+            setCaseStats(cStats);
+            setHistory(hStats);
+        } catch (e) {
+            console.error("Error loading stats", e);
+        }
+    };
 
     const handleChange = (e) => {
         setFormData(prev => ({ ...prev, [e.target.name]: e.target.value }));
@@ -128,6 +149,21 @@ const ProfilePage = () => {
         } catch (error) {
             console.error(error);
             setMessage({ type: 'error', text: 'Error updating profile' });
+        }
+    };
+
+    const handleRevokeSessions = async () => {
+        if (window.confirm("¿Estás seguro? Esto cerrará sesión en TODOS los dispositivos donde hayas iniciado sesión, incluido este. Tendrás que volver a ingresar.")) {
+            try {
+                setMessage({ type: 'info', text: 'Cerrando sesiones...' });
+                await authService.revokeSessions();
+                alert("Sesiones cerradas correctamente. Serás redirigido al inicio de sesión.");
+                await authService.logout();
+                window.location.href = '/login';
+            } catch (error) {
+                console.error("Error revoking sessions:", error);
+                setMessage({ type: 'error', text: 'Error al cerrar sesiones: ' + error.message });
+            }
         }
     };
 
@@ -292,6 +328,30 @@ const ProfilePage = () => {
                                 </div>
                             </div>
 
+
+                            <hr className="border-gray-200 dark:border-gray-700" />
+
+                            {/* Security Zone */}
+                            <div>
+                                <h3 className="text-lg font-medium text-red-600 dark:text-red-400 mb-4 flex items-center">
+                                    <Shield className="w-5 h-5 mr-2" />
+                                    {t('profile.security', 'Seguridad')}
+                                </h3>
+                                <div className="bg-red-50 dark:bg-red-900/10 border border-red-100 dark:border-red-900/30 rounded-lg p-4">
+                                    <p className="text-sm text-gray-700 dark:text-gray-300 mb-4">
+                                        Si crees que tu cuenta ha sido comprometida o olvidaste cerrar sesión en un dispositivo público, puedes cerrar todas las sesiones activas aquí.
+                                    </p>
+                                    <button
+                                        type="button"
+                                        onClick={handleRevokeSessions}
+                                        className="flex items-center px-4 py-2 border border-red-300 dark:border-red-800 text-sm font-medium rounded-md text-red-700 dark:text-red-400 bg-white dark:bg-gray-800 hover:bg-red-50 dark:hover:bg-red-900/20 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-colors"
+                                    >
+                                        <Monitor className="w-4 h-4 mr-2" />
+                                        Cerrar todas las sesiones
+                                    </button>
+                                </div>
+                            </div>
+
                             <div className="flex justify-end pt-6">
                                 <button
                                     type="submit"
@@ -304,80 +364,188 @@ const ProfilePage = () => {
                         </form>
                     </div>
                 </div>
-            </div>
+            </div >
 
             {/* Cropper Modal */}
-            {showCropper && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fadeIn">
-                    <div className="bg-white dark:bg-gray-900 rounded-xl shadow-2xl w-full max-w-md overflow-hidden flex flex-col max-h-[90vh]">
-                        <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
-                            <h3 className="text-lg font-bold text-gray-900 dark:text-white">{t('profile.adjustImage') || 'Ajustar Imagen'}</h3>
-                            <button onClick={handleCancelCrop} className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
-                                <X className="w-5 h-5" />
-                            </button>
-                        </div>
-
-                        <div className="relative h-64 w-full bg-gray-900">
-                            <Cropper
-                                image={imageSrc}
-                                crop={crop}
-                                zoom={zoom}
-                                aspect={1}
-                                onCropChange={setCrop}
-                                onCropComplete={onCropComplete}
-                                onZoomChange={setZoom}
-                            />
-                        </div>
-
-                        <div className="p-4 space-y-4">
-                            <div className="flex items-center space-x-2">
-                                <ZoomOut className="w-4 h-4 text-gray-500" />
-                                <input
-                                    type="range"
-                                    value={zoom}
-                                    min={1}
-                                    max={3}
-                                    step={0.1}
-                                    aria-labelledby="Zoom"
-                                    onChange={(e) => setZoom(Number(e.target.value))}
-                                    className="w-full h-1 bg-gray-200 rounded-lg appearance-none cursor-pointer dark:bg-gray-700"
-                                />
-                                <ZoomIn className="w-4 h-4 text-gray-500" />
+            {
+                showCropper && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fadeIn">
+                        <div className="bg-white dark:bg-gray-900 rounded-xl shadow-2xl w-full max-w-md overflow-hidden flex flex-col max-h-[90vh]">
+                            <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
+                                <h3 className="text-lg font-bold text-gray-900 dark:text-white">{t('profile.adjustImage') || 'Ajustar Imagen'}</h3>
+                                <button onClick={handleCancelCrop} className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
+                                    <X className="w-5 h-5" />
+                                </button>
                             </div>
 
-                            <div className="flex justify-end space-x-3">
-                                <button
-                                    onClick={handleCancelCrop}
-                                    className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-gray-700"
-                                >
-                                    {t('common.cancel') || 'Cancelar'}
-                                </button>
-                                <button
-                                    onClick={handleSaveCroppedImage}
-                                    disabled={isUploading}
-                                    className="flex items-center px-4 py-2 text-sm font-medium text-white bg-indigo-600 border border-transparent rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50"
-                                >
-                                    {isUploading ? (
-                                        <>
-                                            <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                            </svg>
-                                            Subiendo...
-                                        </>
-                                    ) : (
-                                        <>
-                                            <Check className="w-4 h-4 mr-2" />
-                                            {t('common.save') || 'Guardar'}
-                                        </>
-                                    )}
-                                </button>
+                            <div className="relative h-64 w-full bg-gray-900">
+                                <Cropper
+                                    image={imageSrc}
+                                    crop={crop}
+                                    zoom={zoom}
+                                    aspect={1}
+                                    onCropChange={setCrop}
+                                    onCropComplete={onCropComplete}
+                                    onZoomChange={setZoom}
+                                />
+                            </div>
+
+                            <div className="p-4 space-y-4">
+                                <div className="flex items-center space-x-2">
+                                    <ZoomOut className="w-4 h-4 text-gray-500" />
+                                    <input
+                                        type="range"
+                                        value={zoom}
+                                        min={1}
+                                        max={3}
+                                        step={0.1}
+                                        aria-labelledby="Zoom"
+                                        onChange={(e) => setZoom(Number(e.target.value))}
+                                        className="w-full h-1 bg-gray-200 rounded-lg appearance-none cursor-pointer dark:bg-gray-700"
+                                    />
+                                    <ZoomIn className="w-4 h-4 text-gray-500" />
+                                </div>
+
+                                <div className="flex justify-end space-x-3">
+                                    <button
+                                        onClick={handleCancelCrop}
+                                        className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-gray-700"
+                                    >
+                                        {t('common.cancel') || 'Cancelar'}
+                                    </button>
+                                    <button
+                                        onClick={handleSaveCroppedImage}
+                                        disabled={isUploading}
+                                        className="flex items-center px-4 py-2 text-sm font-medium text-white bg-indigo-600 border border-transparent rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50"
+                                    >
+                                        {isUploading ? (
+                                            <>
+                                                <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                                </svg>
+                                                Subiendo...
+                                            </>
+                                        ) : (
+                                            <>
+                                                <Check className="w-4 h-4 mr-2" />
+                                                {t('common.save') || 'Guardar'}
+                                            </>
+                                        )}
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     </div>
+                )
+            }
+            {/* Stats Section */}
+            <div className="mt-8 bg-white dark:bg-gray-800 shadow rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700 animate-in slide-in-from-bottom-5">
+                <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 flex justify-between items-center">
+                    <div>
+                        <h2 className="text-xl font-bold text-gray-900 dark:text-white flex items-center">
+                            <Trophy className="w-5 h-5 mr-2 text-yellow-500" />
+                            {t('profile.performance', 'Mi Desempeño')}
+                        </h2>
+                        <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">Puntajes obtenidos en los módulos y casos</p>
+                    </div>
+                    <div className="flex space-x-2 bg-gray-200 dark:bg-gray-800 p-1 rounded-lg">
+                        <button
+                            onClick={() => setStatsTab('anatomy')}
+                            className={`px-3 py-1 rounded-md text-sm font-medium transition-all ${statsTab === 'anatomy' ? 'bg-white dark:bg-gray-600 shadow text-indigo-600 dark:text-white' : 'text-gray-500 dark:text-gray-400'}`}
+                        >
+                            Anatomía
+                        </button>
+                        <button
+                            onClick={() => setStatsTab('cases')}
+                            className={`px-3 py-1 rounded-md text-sm font-medium transition-all ${statsTab === 'cases' ? 'bg-white dark:bg-gray-600 shadow text-indigo-600 dark:text-white' : 'text-gray-500 dark:text-gray-400'}`}
+                        >
+                            Casos
+                        </button>
+                        <button
+                            onClick={() => setStatsTab('history')}
+                            className={`px-3 py-1 rounded-md text-sm font-medium transition-all ${statsTab === 'history' ? 'bg-white dark:bg-gray-600 shadow text-indigo-600 dark:text-white' : 'text-gray-500 dark:text-gray-400'}`}
+                        >
+                            Historial
+                        </button>
+                    </div>
                 </div>
-            )}
-        </div>
+
+                <div className="p-6">
+                    {statsTab === 'history' ? (
+                        <div className="space-y-4">
+                            {history.length > 0 ? (
+                                history.map((item) => {
+                                    const date = item.timestamp?.toDate ? item.timestamp.toDate() : new Date();
+                                    const dateStr = date.toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' });
+                                    const timeStr = date.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit', hour12: true }); // 11:49am
+
+                                    return (
+                                        <div key={item.id} className="bg-gray-50 dark:bg-gray-700/50 p-4 rounded-lg border border-gray-200 dark:border-gray-600 flex flex-col md:flex-row justify-between items-start md:items-center">
+                                            <div>
+                                                <p className="font-bold text-gray-900 dark:text-white">
+                                                    {item.type === 'anatomy' ? 'Anatomía' : 'Caso Clínico'}: <span className="text-indigo-600 dark:text-indigo-400">{item.moduleTitle || item.title || item.moduleId}</span>
+                                                </p>
+                                                <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                                                    "{item.mode === 'identify' ? '¿Qué es esto?' : (item.mode === 'locate' ? '¿Dónde está?' : item.mode)}" completado el {dateStr} a las {timeStr}.
+                                                </p>
+                                            </div>
+                                            <div className="mt-2 md:mt-0 text-right">
+                                                <div className="text-sm font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Puntaje</div>
+                                                <div className="text-2xl font-black text-emerald-500 dark:text-emerald-400">{item.score}</div>
+                                            </div>
+                                        </div>
+                                    );
+                                })
+                            ) : (
+                                <p className="text-gray-500 dark:text-gray-400 text-center py-4">No hay historial disponible.</p>
+                            )}
+                        </div>
+                    ) : statsTab === 'anatomy' ? (
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                            {Object.keys(anatomyStats).length > 0 ? (
+                                Object.entries(anatomyStats).map(([moduleId, stats]) => (
+                                    <div key={moduleId} className="bg-gray-50 dark:bg-gray-700/50 p-4 rounded-lg border border-gray-200 dark:border-gray-600">
+                                        <h4 className="font-bold text-gray-900 dark:text-white capitalize mb-2">{moduleId.replace('-', ' ')}</h4>
+                                        <div className="flex justify-between items-center mb-1">
+                                            <span className="text-xs text-gray-500 dark:text-gray-400">Mejor Puntaje</span>
+                                            <span className="text-lg font-bold text-indigo-600 dark:text-indigo-400">{stats.highScore || 0}</span>
+                                        </div>
+                                        <div className="flex justify-between items-center">
+                                            <span className="text-xs text-gray-500 dark:text-gray-400">Intentos</span>
+                                            <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{stats.attempts || 0}</span>
+                                        </div>
+                                    </div>
+                                ))
+                            ) : (
+                                <p className="text-gray-500 dark:text-gray-400 col-span-full text-center py-4">No hay puntajes registrados aún.</p>
+                            )}
+                        </div>
+                    ) : (
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                            {Object.keys(caseStats).length > 0 ? (
+                                Object.entries(caseStats).map(([caseId, stats]) => (
+                                    <div key={caseId} className="bg-gray-50 dark:bg-gray-700/50 p-4 rounded-lg border border-gray-200 dark:border-gray-600">
+                                        <h4 className="font-bold text-gray-900 dark:text-white text-sm mb-2 break-all line-clamp-1" title={caseId}>{caseId}</h4>
+                                        <div className="flex justify-between items-center mb-1">
+                                            <span className="text-xs text-gray-500 dark:text-gray-400">Puntaje</span>
+                                            <span className="text-lg font-bold text-emerald-600 dark:text-emerald-400">{stats.score || 0}</span>
+                                        </div>
+                                        <div className="flex justify-between items-center">
+                                            <span className="text-xs text-gray-500 dark:text-gray-400">Aciertos</span>
+                                            <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{stats.correctCount}/{stats.totalQuestions}</span>
+                                        </div>
+                                    </div>
+                                ))
+                            ) : (
+                                <p className="text-gray-500 dark:text-gray-400 col-span-full text-center py-4">No hay puntajes registrados aún.</p>
+                            )}
+                        </div>
+                    )}
+                </div>
+            </div>
+
+        </div >
     );
 };
 

@@ -29,11 +29,11 @@ const MainLayout = () => {
 
     return (
         <div className={clsx(
-            "bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 font-sans flex flex-col transition-colors duration-200 w-full",
+            "bg-gray-50 dark:bg-[#0B1120] text-gray-900 dark:text-gray-100 font-sans flex flex-col transition-colors duration-200 w-full",
             isImmersive ? "h-screen overflow-hidden" : "min-h-screen"
         )}>
             {/* Navigation Bar */}
-            <nav className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 sticky top-0 z-50 shadow-sm transition-colors duration-200 flex-none">
+            <nav className="bg-white dark:bg-[#0f172a] border-b border-gray-200 dark:border-gray-800 sticky top-0 z-50 shadow-sm transition-colors duration-200 flex-none">
                 <div className={clsx(
                     'mx-auto px-4 sm:px-6 lg:px-8',
                     isImmersive ? 'max-w-full' : 'max-w-7xl'

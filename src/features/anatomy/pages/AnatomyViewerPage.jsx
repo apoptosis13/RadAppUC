@@ -1,8 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next'; // Import useTranslation
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Trophy } from 'lucide-react';
 import AnatomyInteractiveViewer from '../components/AnatomyInteractiveViewer';
+import AnatomyQuiz from '../../quiz/AnatomyQuiz/AnatomyQuiz';
 import { anatomyService } from '../../../services/anatomyService';
 import { activityLogService } from '../../../services/activityLogService';
 
@@ -16,6 +17,24 @@ const AnatomyViewerPage = () => {
     const [progress, setProgress] = useState(0);
     const { t, i18n } = useTranslation(); // Use translation hook
     const navigate = useNavigate();
+
+    // Quiz State
+    const [isQuizActive, setIsQuizActive] = useState(false);
+    const [quizProps, setQuizProps] = useState({
+        controlledSelection: false,
+        selectedId: null,
+        hideLabels: false,
+        onAnnotationClick: null,
+        forceSlice: null,
+        forceSeriesId: null,
+        isHighIntensity: false,
+        dimUnselected: false
+    });
+    const [lastUserClick, setLastUserClick] = useState(null);
+
+    const handleViewerUpdate = useCallback((newProps) => {
+        setQuizProps(prev => ({ ...prev, ...newProps }));
+    }, []);
 
     useEffect(() => {
         loadModule();
@@ -141,7 +160,33 @@ const AnatomyViewerPage = () => {
                     module={module}
                     className="h-full w-full"
                     onBack={() => navigate('/anatomy')}
+                    // Quiz Overrides
+                    controlledSelection={quizProps.controlledSelection}
+                    selectedId={quizProps.selectedId}
+                    hideLabels={quizProps.hideLabels}
+                    forceSlice={quizProps.forceSlice}
+                    forceSeriesId={quizProps.forceSeriesId}
+                    isHighIntensity={quizProps.isHighIntensity}
+                    dimUnselected={quizProps.dimUnselected}
+                    onAnnotationClick={
+                        isQuizActive
+                            ? (ann) => setLastUserClick(ann)
+                            : null
+                    }
+                    onStartQuiz={!isQuizActive ? () => setIsQuizActive(true) : null}
                 />
+
+                {isQuizActive && (
+                    <AnatomyQuiz
+                        module={module}
+                        onClose={() => {
+                            setIsQuizActive(false);
+                            setQuizProps({ controlledSelection: false, selectedId: null, hideLabels: false });
+                        }}
+                        onViewerUpdate={handleViewerUpdate}
+                        userClickTrigger={lastUserClick}
+                    />
+                )}
             </div>
         </div>
     );

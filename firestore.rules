@@ -45,6 +45,17 @@ service cloud.firestore {
       
       // Deletion: Super Admin can delete anyone. Admins can delete non-admins/non-instructors.
       allow delete: if isSuperAdmin() || (isAdmin() && !(existingData().role in ['admin', 'instructor']));
+
+      // Subcollections (stats, history, etc.)
+      // Allow user to read/write their own nested data
+      // Subcollections (stats, history, etc.)
+      // Allow user to read/write their own nested data
+      match /stats/{document=**} {
+        allow read, write: if isAuthenticated() && (request.auth.uid == userId || isAdmin());
+      }
+      match /history/{document=**} {
+        allow read, write: if isAuthenticated() && (request.auth.uid == userId || isAdmin());
+      }
     }
 
     // Helper to get existing data safely

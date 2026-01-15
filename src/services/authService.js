@@ -181,6 +181,12 @@ export const authService = {
         await signOut(auth);
     },
 
+    revokeSessions: async () => {
+        const revokeFn = httpsCallable(functions, 'revokeUserSessions');
+        const result = await revokeFn();
+        return result.data;
+    },
+
     getCurrentUser: () => {
         return auth.currentUser;
     },

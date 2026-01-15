@@ -539,3 +539,20 @@ exports.generateQuizAI_v2 = functions.https.onCall(async (data, context) => {
         );
     }
 });
+
+exports.revokeUserSessions = functions.https.onCall(async (data, context) => {
+    if (!context.auth) {
+        throw new functions.https.HttpsError('unauthenticated', 'Debe estar autenticado.');
+    }
+
+    const uid = context.auth.uid;
+
+    try {
+        await admin.auth().revokeRefreshTokens(uid);
+        console.log(`User ${uid} tokens revoked.`);
+        return { success: true, message: "Todas las sesiones han sido cerradas. Deberá iniciar sesión nuevamente." };
+    } catch (error) {
+        console.error("Revoke Tokens Error:", error);
+        throw new functions.https.HttpsError('internal', 'Error al cerrar sesiones.', error);
+    }
+});
