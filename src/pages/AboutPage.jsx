@@ -13,13 +13,24 @@ const AboutPage = () => {
 
     const VERSIONS = [
         {
+            version: '1.0.0-RC1',
+            date: '2026-01-15',
+            title: 'Analíticas Globales y Mejoras de Anatomía',
+            changes: [
+                'Analíticas Globales: Panel de administración con métricas de usuarios y uso',
+                'Seguridad de Sesión: Nueva función para revocar todas las sesiones activas',
+                'Quiz de Anatomía: Modo "Localizar" mejorado con cambio automático de secuencia',
+                'Experiencia de Usuario: Caja de preguntas movible y correcciones visuales'
+            ]
+        },
+        {
             version: '1.0.0-beta.5',
             date: '2026-01-11',
             title: 'Refinamiento de UI y Tipografía',
             changes: [
                 'Nueva tipografía moderna (Inter) en toda la plataforma',
                 'Atlas Anatómico: Escala de texto inteligente dinámica',
-                'Me Mejoras de legibilidad en etiquetas y paneles'
+                'Mejoras de legibilidad en etiquetas y paneles'
             ]
         },
         {
@@ -141,8 +152,11 @@ const AboutPage = () => {
                                                         <p className="text-sm font-bold text-gray-900 dark:text-white">
                                                             v{versionItem.version}
                                                         </p>
-                                                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
-                                                            Beta
+                                                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium 
+                                                            ${versionItem.version.includes('RC')
+                                                                ? 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200'
+                                                                : 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'}`}>
+                                                            {versionItem.version.includes('RC') ? 'RC' : 'Beta'}
                                                         </span>
                                                     </div>
                                                     <p className="text-sm text-gray-500 dark:text-gray-400 mt-1 font-medium">
