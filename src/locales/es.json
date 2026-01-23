@@ -70,15 +70,33 @@
     "viewer": {
       "loading": "Cargando visor...",
       "structures": "Estructuras Anatómicas",
-      "showAll": "Ver todo",
-      "hideAll": "Ocultar todo",
+      "explorer": "Explorador",
+      "mainImages": "Imágenes Principales",
+      "scrollHint": "Scroll para navegar",
+      "imagesAbbr": "imág.",
+      "series": "Serie",
+      "noImages": "Sin Imágenes",
+      "noImageAvailable": "Imagen no disponible",
+      "sidebar": {
+        "showAll": "Ver Todo",
+        "hideAll": "Ocultar Todo",
+        "zones": "Zonas Anatómicas"
+      },
       "descriptionTitle": "DESCRIPCIÓN",
       "tools": {
         "rotate": "Rotar",
         "flip": "Voltear",
         "zoomIn": "Acercar",
         "zoomOut": "Alejar",
-        "fullscreen": "Pantalla Completa"
+        "fullscreen": "Pantalla Completa",
+        "atlasMode": "Modo Atlas",
+        "normalMode": "Modo Normal",
+        "adjust": "Ajustar Imagen",
+        "brightness": "Brillo",
+        "contrast": "Contraste",
+        "rotate": "Rotar",
+        "flipH": "Voltear",
+        "reset": "Restablecer"
       }
     },
     "categories": {
@@ -119,7 +137,16 @@
     "notEnoughData": "No hay suficientes estructuras para un quiz.",
     "identifyQuestion": "¿Qué estructura está señalada?",
     "typeStructure": "Escribe el nombre de la estructura...",
-    "submit": "Confirmar"
+    "submit": "Confirmar",
+    "anatomy": {
+      "identifyBadge": "¿Qué es esto?",
+      "locateBadge": "¿Dónde está...?",
+      "score": "Puntaje",
+      "hits": "Aciertos",
+      "modeIdentify": "Modo Identificación",
+      "modeLocate": "Modo Localización",
+      "exit": "Salir"
+    }
   },
   "cases": {
     "pageTitle": "Biblioteca de Casos",
@@ -129,6 +156,7 @@
     "notFound": "Caso no encontrado",
     "back": "Volver a Casos",
     "history": "Historia Clínica",
+    "discussion": "Discusión del Caso",
     "loading": "Cargando...",
     "difficulty": {
       "Beginner": "Principiante",
@@ -270,6 +298,68 @@
     },
     "changelog": {
       "title": "Historial de Versiones"
+    }
+  },
+  "aiQuiz": {
+    "title": "Desafío de Conocimiento",
+    "description": "Pon a prueba lo aprendido con 10 preguntas generadas por IA sobre este caso.",
+    "startBtn": "Iniciar Quiz con IA",
+    "generating": "Generando desafío con IA...",
+    "errorPrefix": "Error: ",
+    "start": {
+      "title": "Desafío de Diagnóstico Diferencial",
+      "level": "Nivel: ",
+      "r1": "R1 (Principiante)",
+      "r2": "R2 (Intermedio)",
+      "r3": "R3 (Avanzado)",
+      "features": {
+        "questions": {
+          "title": "10 Preguntas",
+          "desc": "Generadas con IA específicamente para este caso."
+        },
+        "time": {
+          "title": "Tiempo Limitado",
+          "desc": "Suma puntos extra por responder rápido."
+        },
+        "lives": {
+          "title": "2 Oportunidades",
+          "desc": "Si fallas, tienes un segundo intento por mitad de puntaje."
+        }
+      },
+      "beginBtn": "Comenzar Quiz"
+    },
+    "game": {
+      "progress": "Pregunta {{current}} de {{total}}",
+      "points": "Puntos: {{score}}",
+      "correct": "¡Correcto!",
+      "explanation": "Respuesta / Explicación:",
+      "next": "Siguiente Pregunta",
+      "results": "Ver Resultados",
+      "retryTip": "¡Inténtalo de nuevo! Te queda 1 vida."
+    },
+    "results": {
+      "title": "¡Desafío Completado!",
+      "subtitle": "Has completado el diagnóstico diferencial.",
+      "finalScore": "Puntaje Final",
+      "praise": "¡Gran trabajo, Doctor!",
+      "close": "Cerrar",
+      "retry": "Intentar de Nuevo"
+    },
+    "caseComments": "Comentarios del Caso",
+    "reportIssue": "Reportar un problema con esta pregunta",
+    "feedback": {
+      "title": "Reportar Problema",
+      "reasonLabel": "Motivo del reporte",
+      "commentLabel": "Comentarios adicionales (opcional)",
+      "commentPlaceholder": "Describe el error o sugiere una corrección...",
+      "reason": {
+        "incorrect": "Respuesta incorrecta",
+        "phrasing": "Redacción confusa",
+        "inappropriate": "Contenido inapropiado",
+        "other": "Otro"
+      },
+      "success": "¡Gracias! Tu reporte ha sido enviado.",
+      "error": "Error al enviar reporte."
     }
   }
 }

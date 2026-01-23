@@ -27,4 +27,7 @@ check_dicebear.js
 download_clean_avatars.js
 
 # Firebase
+# Firebase
 .firebase/
+serviceAccountKey.json
+backups/

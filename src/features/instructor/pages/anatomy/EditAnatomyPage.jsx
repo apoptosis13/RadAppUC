@@ -49,6 +49,8 @@ const EditAnatomyPage = () => {
     const [editorImageIndex, setEditorImageIndex] = useState(0);
     const [error, setError] = useState(null);
     const [translatingFields, setTranslatingFields] = useState({}); // Tracking which field is translating
+    const [importSourceId, setImportSourceId] = useState("");
+    const [confirmImportModal, setConfirmImportModal] = useState(null); // { message, onConfirm }
 
     useEffect(() => {
         if (isEditing) {
@@ -219,55 +221,78 @@ const EditAnatomyPage = () => {
         const sourceSeries = formData.series.find(s => s.id === sourceSeriesId);
         const targetSeries = activeSeries;
 
-        if (!sourceSeries || !targetSeries) return;
+        if (!sourceSeries || !targetSeries) {
+            console.error("Source or Target series not found");
+            return;
+        }
 
-        if (window.confirm(`¿Estás seguro de copiar las anotaciones de "${sourceSeries.name}" a "${targetSeries.name}"? Esto agregará las estructuras a las imágenes actuales.`)) {
-            let copiedLegacyCount = 0;
-            let copiedStructuresCount = 0;
+        setConfirmImportModal({
+            message: `¿Estás seguro de copiar las anotaciones de "${sourceSeries.name}" a "${targetSeries.name}"? Esto agregará las estructuras a las imágenes actuales.`,
+            onConfirm: () => {
+                console.log("Starting Import...");
+                let copiedLegacyCount = 0;
+                let copiedStructuresCount = 0;
 
-            // 1. Copy Legacy Image Annotations
-            const updatedImages = targetSeries.images.map((targetImg, index) => {
-                const sourceImg = sourceSeries.images[index];
-                if (!sourceImg || !sourceImg.annotations || sourceImg.annotations.length === 0) {
-                    return targetImg;
+                // Check if source has modern structures
+                const hasModernStructures = sourceSeries.structures && sourceSeries.structures.length > 0;
+
+                let updatedImages = targetSeries.images;
+
+                // 1. Copy Legacy Image Annotations (ONLY if no modern structures exist)
+                // This prevents copying stale/duplicate data if the module has been migrated but not cleaned.
+                if (!hasModernStructures) {
+                    updatedImages = targetSeries.images.map((targetImg, index) => {
+                        const sourceImg = sourceSeries.images[index];
+                        if (!sourceImg || !sourceImg.annotations || sourceImg.annotations.length === 0) {
+                            return targetImg;
+                        }
+
+                        // Deep clone and regenerate IDs for legacy annotations
+                        const newAnnotations = sourceImg.annotations.map(ann => ({
+                            ...ann,
+                            id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
+                            points: ann.points ? ann.points.map(p => ({ ...p })) : undefined
+                        }));
+
+                        copiedLegacyCount += newAnnotations.length;
+
+                        return {
+                            ...targetImg,
+                            annotations: [...(targetImg.annotations || []), ...newAnnotations]
+                        };
+                    });
+                } else {
+                    console.log("Source has modern structures. Skipping legacy annotation copy to avoid duplication/stale data.");
                 }
 
-                // Deep clone and regenerate IDs for legacy annotations
-                const newAnnotations = sourceImg.annotations.map(ann => ({
-                    ...ann,
+                // 2. Copy Series Structures (New Model)
+                const newStructures = (sourceSeries.structures || []).map(struct => ({
+                    ...struct,
                     id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
-                    points: ann.points ? ann.points.map(p => ({ ...p })) : undefined
+                    locations: JSON.parse(JSON.stringify(struct.locations || {}))
                 }));
 
-                copiedLegacyCount += newAnnotations.length;
+                copiedStructuresCount = newStructures.length;
+                console.log(`Copied: ${copiedLegacyCount} legacy, ${copiedStructuresCount} structures`);
 
-                return {
-                    ...targetImg,
-                    annotations: [...(targetImg.annotations || []), ...newAnnotations]
-                };
-            });
+                handleUpdateSeries(targetSeries.id, {
+                    images: updatedImages,
+                    structures: [...(targetSeries.structures || []), ...newStructures]
+                });
 
-            // 2. Copy Series Structures (New Model)
-            const newStructures = (sourceSeries.structures || []).map(struct => ({
-                ...struct,
-                id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
-                locations: JSON.parse(JSON.stringify(struct.locations || {}))
-            }));
+                setConfirmImportModal(null); // Close modal
 
-            copiedStructuresCount = newStructures.length;
+                // Show result alert (using timeout to ensure modal closes first)
+                // Show result alert (using timeout to ensure modal closes first)
+                setTimeout(() => {
+                    const msg = hasModernStructures
+                        ? `Importación Inteligente Completa.\n\nSe detectaron estructuras modernas, por lo que se ignoraron las anotaciones antiguas para evitar duplicados.\n\nEstructuras copiadas: ${copiedStructuresCount}`
+                        : `Importación Completa.\n\nSe copiaron anotaciones en formato legado (antiguo).\n\nAnotaciones copiadas: ${copiedLegacyCount}`;
 
-            handleUpdateSeries(targetSeries.id, {
-                images: updatedImages,
-                structures: [...(targetSeries.structures || []), ...newStructures]
-            });
-
-            const totalCopied = copiedLegacyCount + copiedStructuresCount;
-            if (totalCopied > 0) {
-                alert(`Anotaciones copiadas correctamente.`);
-            } else {
-                alert("No se encontraron estructuras para copiar en la serie origen.");
+                    alert(msg);
+                }, 100);
             }
-        }
+        });
     };
 
     const handleReverseSeries = (seriesId) => {
@@ -668,29 +693,35 @@ const EditAnatomyPage = () => {
                                     <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
                                         Importar estructuras:
                                     </span>
-                                    <select
-                                        onChange={(e) => {
-                                            if (e.target.value) {
-                                                handleCopyAnnotations(e.target.value);
-                                                e.target.value = ""; // Reset select
+                                    <div className="flex items-center space-x-2">
+                                        <select
+                                            value={importSourceId}
+                                            onChange={(e) => setImportSourceId(e.target.value)}
+                                            className="block w-64 rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white sm:text-sm"
+                                        >
+                                            <option value="">Seleccionar serie origen...</option>
+                                            {formData.series
+                                                .filter(s => s.id !== activeSeries.id && (s.plane || 'axial') === (activeSeries.plane || 'axial'))
+                                                .map(s => (
+                                                    <option key={s.id} value={s.id}>
+                                                        {s.name} ({s.images?.length || 0} imgs)
+                                                    </option>
+                                                ))
                                             }
-                                        }}
-                                        className="block w-64 rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white sm:text-sm"
-                                        defaultValue=""
-                                    >
-                                        <option value="" disabled>Copiar desde...</option>
-                                        {formData.series
-                                            .filter(s => s.id !== activeSeries.id && (s.plane || 'axial') === (activeSeries.plane || 'axial'))
-                                            .map(s => (
-                                                <option key={s.id} value={s.id}>
-                                                    {s.name} ({s.images?.length || 0} imgs)
-                                                </option>
-                                            ))
-                                        }
-                                        {formData.series.every(s => s.id === activeSeries.id || (s.plane || 'axial') !== (activeSeries.plane || 'axial')) && (
-                                            <option disabled>No hay otras series del mismo plano</option>
-                                        )}
-                                    </select>
+                                            {formData.series.every(s => s.id === activeSeries.id || (s.plane || 'axial') !== (activeSeries.plane || 'axial')) && (
+                                                <option disabled>No hay otras series del mismo plano</option>
+                                            )}
+                                        </select>
+                                        <button
+                                            type="button"
+                                            onClick={() => handleCopyAnnotations(importSourceId)}
+                                            disabled={!importSourceId}
+                                            className="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                                        >
+                                            <Upload className="w-4 h-4 mr-2" />
+                                            Importar
+                                        </button>
+                                    </div>
                                 </div>
                             )}
 
@@ -806,6 +837,30 @@ const EditAnatomyPage = () => {
                 </div>
             </div>
 
+
+            {/* Custom Confirmation Modal */}
+            {confirmImportModal && (
+                <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 backdrop-blur-sm">
+                    <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-6 max-w-sm w-full shadow-2xl">
+                        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">Confirmar Importación</h3>
+                        <p className="text-sm text-gray-600 dark:text-gray-300 mb-6">{confirmImportModal.message}</p>
+                        <div className="flex justify-end space-x-3">
+                            <button
+                                onClick={() => setConfirmImportModal(null)}
+                                className="px-4 py-2 text-sm text-gray-700 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
+                            >
+                                Cancelar
+                            </button>
+                            <button
+                                onClick={confirmImportModal.onConfirm}
+                                className="px-4 py-2 text-sm bg-indigo-600 text-white rounded hover:bg-indigo-700 transition-colors shadow-sm"
+                            >
+                                Confirmar e Importar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* Footer with Save Button */}
             <div className="fixed bottom-0 right-0 w-full bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 p-4 flex justify-end z-50 shadow-lg">

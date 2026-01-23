@@ -13,6 +13,18 @@ const AboutPage = () => {
 
     const VERSIONS = [
         {
+            version: '1.0.0-RC2',
+            date: '2026-01-23',
+            title: 'Feedback, Optimización y Traducciones',
+            changes: [
+                'Feedback Quiz IA: Sistema para reportar errores en preguntas con modal dedicado',
+                'Layout de Casos: Optimización de espacio (55% imagen / 45% discusión)',
+                'Visor de Imágenes: Agregado desplazamiento (pan) al hacer zoom',
+                'Traducciones: Corrección de idioma inglés y sincronización del editor de texto',
+                'Seguridad: Reglas de Firestore para feedback de usuarios'
+            ]
+        },
+        {
             version: '1.0.0-RC1',
             date: '2026-01-15',
             title: 'Analíticas Globales y Mejoras de Anatomía',

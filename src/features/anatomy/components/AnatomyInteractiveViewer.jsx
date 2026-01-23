@@ -26,6 +26,7 @@ import {
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { getSmoothPath } from '../../../utils/svgUtils';
+import { getLocalizedModuleField } from '../../../utils/anatomyTranslations';
 
 const ANATOMY_CATEGORIES = [
     { id: 'general', icon: Activity },
@@ -57,7 +58,8 @@ const AnatomyInteractiveViewer = ({
     forceSlice = null,           // Force specific slice index
     forceSeriesId = null,        // Force specific series ID
     isHighIntensity = false,     // Use pulsing highlight
-    dimUnselected = false        // Dim non-selected items (Isolation Mode)
+    dimUnselected = false,       // Dim non-selected items (Isolation Mode)
+    disableAtlasMode = false     // Force disable Atlas Mode and hide toggle
 }) => {
     const { t, i18n } = useTranslation();
     const currentLang = i18n.language;
@@ -111,11 +113,27 @@ const AnatomyInteractiveViewer = ({
             // Guard against 0 dimensions
             if (width > 0 && height > 0) {
                 setContainerSize({ width, height });
+
+                // If in Atlas Mode, auto-adjust scale on resize
+                if (viewMode === 'atlas') {
+                    // Responsive Atlas Mode Logic
+                    // Mobile (< 768px): Use 90% width (5% margin)
+                    // Desktop: Use 70% width (15% margin) - Changed from 50%
+                    const isMobile = width < 768;
+                    const marginFactor = isMobile ? 0.05 : 0.15;
+
+                    const minMargin = Math.max(isMobile ? 20 : 80, width * marginFactor);
+                    const availableForImage = Math.max(100, width - (minMargin * 2));
+                    const scaleFactor = availableForImage / width;
+                    const safeScale = Math.min(isMobile ? 0.95 : 0.9, Math.max(0.3, scaleFactor));
+
+                    setViewport(p => ({ ...p, scale: safeScale }));
+                }
             }
         });
         ro.observe(canvasRef.current);
         return () => ro.disconnect();
-    }, [isImageLoaded]); // Critical: Re-run when canvas is actually rendered
+    }, [isImageLoaded, viewMode]); // Added viewMode dependency
 
 
 
@@ -357,34 +375,55 @@ const AnatomyInteractiveViewer = ({
             }
 
             // --- POINT RENDERING (Default & Fallback) ---
-
-            // Scale dot size relative to image, correcting for zoom
-            // USER REQUEST 2026-01-04: Smaller points, 50% opacity
-            // USER REQUEST UPDATE: Even smaller in Atlas Mode
             const sizeFactor = viewMode === 'atlas' ? 300 : 150;
             const baseRadius = (naturalSize.width / sizeFactor) / viewport.scale;
-            // If Atlas Mode, we DO NOT render text here. We render it in overlay.
-            // If Normal Mode, we render text if selected.
             const showText = isSelected && viewMode !== 'atlas' && !hideLabels;
+            const isHovered = hoveredAnnotationId === ann.id;
+
+            // Opacity for points
+            let opacity = 1;
+            const hasSelection = effectiveSelectedId !== null;
+            if (hasSelection) {
+                opacity = isSelected ? 1 : 0.3; // 70% transparent if not selected
+            } else if (isHovered && viewMode === 'atlas') {
+                // If in atlas mode and hovering? 
+                // User said "mouse over... highlight point".
+                // He also said "click... rest 70% transparent".
+                // So if no selection, maybe default opacity?
+                // But if hovering, ensure it's visible.
+                opacity = 1;
+            } else if (viewMode === 'atlas') {
+                // Nothing selected, nothing hovered, but in atlas mode?
+                // Keep them visible? Or dim? Default to visible.
+                opacity = 1;
+            } else {
+                // Normal mode, legacy handling
+                opacity = dimUnselected ? (isSelected ? 1 : 0.1) : (isSelected ? 1 : 0.5);
+            }
 
             return (
                 <g
                     key={ann.id}
-                    style={{ cursor: 'pointer' }}
+                    style={{ cursor: 'pointer', opacity: opacity, transition: 'opacity 0.3s ease' }}
                     onClick={(e) => {
                         e.stopPropagation();
                         if (onAnnotationClick) onAnnotationClick(ann);
-                        if (!controlledSelection) setSelectedAnnotationId(ann.id);
+                        if (!controlledSelection) {
+                            if (selectedAnnotationId === ann.id) setSelectedAnnotationId(null);
+                            else setSelectedAnnotationId(ann.id);
+                        }
                     }}
+                    onMouseEnter={() => setHoveredAnnotationId(ann.id)}
+                    onMouseLeave={() => setHoveredAnnotationId(null)}
                 >
                     <circle
                         cx={x} cy={y}
-                        r={isSelected ? baseRadius * 1.5 : baseRadius}
+                        r={(isSelected || isHovered) ? baseRadius * 1.5 : baseRadius}
                         fill={color}
-                        opacity={dimUnselected ? (isSelected ? 1 : 0.1) : (isSelected ? 1 : 0.5)}
+                        opacity={1} // Controlled by group opacity now
                         stroke="white"
-                        strokeWidth={isSelected ? baseRadius * 0.3 : baseRadius * 0.2}
-                        className={isSelected && isHighIntensity ? 'animate-pulse' : ''}
+                        strokeWidth={(isSelected || isHovered) ? baseRadius * 0.3 : baseRadius * 0.2}
+                        className={(isSelected || isHovered) && isHighIntensity ? 'animate-pulse' : ''}
                     />
                     {showText && (
                         <text
@@ -404,6 +443,8 @@ const AnatomyInteractiveViewer = ({
     };
 
     // --- ATLAS OVERLAY RENDERER ---
+    const [hoveredAnnotationId, setHoveredAnnotationId] = useState(null);
+
     const renderAtlasOverlay = () => {
         if (viewMode !== 'atlas' || !isImageLoaded || !viewBoxDetails) return null;
 
@@ -411,7 +452,6 @@ const AnatomyInteractiveViewer = ({
 
         // Responsive Font Size Calculation
         const densityFactor = visibleAnnotations.length > 20 ? 80 : 50;
-        // Clamp between 12px and 24px, primarily driven by container width / density
         const fontSize = Math.max(12, Math.min(24, containerSize.width / densityFactor));
         const lineHeight = fontSize * 1.5;
 
@@ -445,12 +485,7 @@ const AnatomyInteractiveViewer = ({
 
         // 2. Resolve Collisions per side
         const resolveSide = (sideItems) => {
-            // Sort by Y ascending
             sideItems.sort((a, b) => a.screenY - b.screenY);
-
-            // Simple stack: ensure y[i] >= y[i-1] + lineHeight
-            // To prevent massive drift downwards, we can try to "center" the stack around the cluster,
-            // but a downward push is safer and standard for connected labels.
             for (let i = 1; i < sideItems.length; i++) {
                 const prev = sideItems[i - 1];
                 const curr = sideItems[i];
@@ -465,35 +500,56 @@ const AnatomyInteractiveViewer = ({
         const rightItems = resolveSide(items.filter(i => i.isRight));
         const allAdjustedItems = [...leftItems, ...rightItems];
 
+        // Determine opacity based on selection
+        const hasSelection = effectiveSelectedId !== null;
+
         return (
             <svg className="absolute inset-0 w-full h-full pointer-events-none z-30">
                 {allAdjustedItems.map(item => {
                     const textX = item.isRight ? containerSize.width - 10 : 10;
                     const textAnchor = item.isRight ? 'end' : 'start';
+                    const isSelected = effectiveSelectedId === item.id;
+                    const isHovered = hoveredAnnotationId === item.id;
+
+                    // Opacity Logic:
+                    // If something is selected:
+                    //   - The selected item is 1.0
+                    //   - Others are 0.3 (70% transparent)
+                    // If nothing selected but something hovered:
+                    //   - Hovered item 1.0
+                    //   - Others 1.0 (or maybe slightly dim? User didn't specify, implied "when click... rest transparent")
+
+                    let opacity = 1;
+                    if (hasSelection) {
+                        opacity = isSelected ? 1 : 0.3;
+                    }
+
+                    // Highlight logic handles stroke width/color changes usually, but opacity is key here.
+                    const finalColor = (isSelected || isHovered) ? item.color : (hasSelection ? item.color : item.color); // Keep color logic simple for now
 
                     return (
-                        <g key={item.id}>
-                            {/* Connection Line: From Anatomy Point (screenX, screenY) to Text Label (textX, textY) */}
+                        <g key={item.id} style={{ opacity: opacity, transition: 'opacity 0.3s ease' }}>
+                            {/* Connection Line */}
                             <path
                                 d={`M ${item.screenX} ${item.screenY} L ${textX} ${item.textY}`}
-                                stroke={item.color}
-                                strokeWidth="1"
+                                stroke={finalColor}
+                                strokeWidth={isSelected || isHovered ? "2" : "1"}
                                 opacity="0.6"
                                 fill="none"
                             />
-                            <circle cx={item.screenX} cy={item.screenY} r="2" fill={item.color} />
+                            <circle cx={item.screenX} cy={item.screenY} r={isSelected || isHovered ? "4" : "2"} fill={finalColor} />
                             {!hideLabels && (
                                 <text
                                     x={textX}
-                                    y={item.textY - 3} // Shift text up so line acts as underline
+                                    y={item.textY - 3}
                                     textAnchor={textAnchor}
-                                    fill={item.color}
+                                    fill={finalColor}
                                     fontSize={fontSize}
-                                    fontWeight="normal"
+                                    fontWeight={isSelected || isHovered ? "bold" : "normal"}
                                     style={{
                                         paintOrder: 'stroke',
                                         stroke: '#000000', // Black halo
-                                        strokeWidth: '4px', // Thick enough to hide line
+                                        strokeWidth: '2.5px', // Thinner halo (User request)
                                         strokeLinecap: 'round',
                                         strokeLinejoin: 'round'
                                     }}
@@ -501,7 +557,7 @@ const AnatomyInteractiveViewer = ({
                                     {item.label}
                                 </text>
                             )}
-                            {/* Invisible interactive area for easier clicking */}
+                            {/* Interactive Area */}
                             <rect
                                 x={item.isRight ? textX - (item.label.length * fontSize * 0.6) : textX}
                                 y={item.textY - fontSize}
@@ -514,9 +570,15 @@ const AnatomyInteractiveViewer = ({
                                 }}
                                 onClick={(e) => {
                                     e.stopPropagation();
-                                    if (onAnnotationClick) onAnnotationClick(item); // Note: item is simplified ann
-                                    if (!controlledSelection) setSelectedAnnotationId(item.id);
+                                    if (onAnnotationClick) onAnnotationClick(item);
+                                    if (!controlledSelection) {
+                                        // Toggle selection on click
+                                        if (selectedAnnotationId === item.id) setSelectedAnnotationId(null);
+                                        else setSelectedAnnotationId(item.id);
+                                    }
                                 }}
+                                onMouseEnter={() => setHoveredAnnotationId(item.id)}
+                                onMouseLeave={() => setHoveredAnnotationId(null)}
                             />
                         </g>
                     );
@@ -524,6 +586,14 @@ const AnatomyInteractiveViewer = ({
             </svg>
         );
     };
+
+    // Force Disable Atlas Mode if required
+    useEffect(() => {
+        if (disableAtlasMode && viewMode === 'atlas') {
+            setViewMode('default');
+            setViewport(p => ({ ...p, scale: 1 }));
+        }
+    }, [disableAtlasMode, viewMode]);
 
     const handleWheel = (e) => {
         if (e.ctrlKey) {
@@ -640,7 +710,7 @@ const AnatomyInteractiveViewer = ({
                         </button>
                     </div>
                     <h2 className="text-white font-medium text-sm px-2">
-                        {module.title} - <span className="text-gray-400">{activeSeries.name.replace('Sagittal', 'Sagital')}</span>
+                        {getLocalizedModuleField(module, 'title', currentLang)} - <span className="text-gray-400">{activeSeries.name.replace('Sagittal', 'Sagital')}</span>
                     </h2>
                 </div>
                 <div className="flex items-center space-x-2 relative">
@@ -651,7 +721,7 @@ const AnatomyInteractiveViewer = ({
                             title={t('quiz.startQuiz', 'Desafío de Anatomía')}
                         >
                             <Trophy className="w-4 h-4 text-yellow-300" />
-                            <span className="text-xs font-bold uppercase tracking-wide">Desafío</span>
+                            <span className="text-xs font-bold uppercase tracking-wide">{t('quiz.anatomyChallenge', 'Desafío')}</span>
                         </button>
                     )}
 
@@ -660,14 +730,14 @@ const AnatomyInteractiveViewer = ({
                     <button
                         onClick={() => setShowAdjustments(!showAdjustments)}
                         className={`p-1.5 rounded transition-colors ${showAdjustments ? 'bg-gray-800 text-white' : 'text-gray-400 hover:text-white hover:bg-gray-800'}`}
-                        title="Ajustar Imagen"
+                        title={t('anatomy.viewer.tools.adjust', 'Ajustar Imagen')}
                     >
                         <Sun className="w-5 h-5" />
                     </button>
                     {showAdjustments && (
                         <div className="absolute top-10 right-0 bg-gray-900 border border-gray-700 p-4 rounded-lg shadow-xl z-50 w-64 space-y-4">
                             <div>
-                                <label className="text-xs text-gray-400 mb-1 block flex justify-between">Brillo <span>{adjustments.brightness}%</span></label>
+                                <label className="text-xs text-gray-400 mb-1 block flex justify-between">{t('anatomy.viewer.tools.brightness', 'Brillo')} <span>{adjustments.brightness}%</span></label>
                                 <input
                                     type="range" min="50" max="150" value={adjustments.brightness}
                                     onChange={(e) => updateAdjustment('brightness', parseInt(e.target.value))}
@@ -675,7 +745,7 @@ const AnatomyInteractiveViewer = ({
                                 />
                             </div>
                             <div>
-                                <label className="text-xs text-gray-400 mb-1 block flex justify-between">Contraste <span>{adjustments.contrast}%</span></label>
+                                <label className="text-xs text-gray-400 mb-1 block flex justify-between">{t('anatomy.viewer.tools.contrast', 'Contraste')} <span>{adjustments.contrast}%</span></label>
                                 <input
                                     type="range" min="50" max="150" value={adjustments.contrast}
                                     onChange={(e) => updateAdjustment('contrast', parseInt(e.target.value))}
@@ -683,14 +753,14 @@ const AnatomyInteractiveViewer = ({
                                 />
                             </div>
                             <div className="flex justify-between gap-2">
-                                <button onClick={() => updateAdjustment('rotate', (adjustments.rotate + 90) % 360)} className="flex-1 py-1 text-xs text-center border border-gray-700 rounded hover:bg-gray-800 text-gray-300">Rotar</button>
-                                <button onClick={() => updateAdjustment('flipH', !adjustments.flipH)} className="flex-1 py-1 text-xs text-center border border-gray-700 rounded hover:bg-gray-800 text-gray-300">Voltear</button>
+                                <button onClick={() => updateAdjustment('rotate', (adjustments.rotate + 90) % 360)} className="flex-1 py-1 text-xs text-center border border-gray-700 rounded hover:bg-gray-800 text-gray-300">{t('anatomy.viewer.tools.rotate', 'Rotar')}</button>
+                                <button onClick={() => updateAdjustment('flipH', !adjustments.flipH)} className="flex-1 py-1 text-xs text-center border border-gray-700 rounded hover:bg-gray-800 text-gray-300">{t('anatomy.viewer.tools.flipH', 'Voltear')}</button>
                             </div>
                             <button
                                 onClick={() => { setAdjustments({ brightness: 100, contrast: 100, rotate: 0, flipH: false }); setViewport(p => ({ ...p, scale: 1, cx: naturalSize.width / 2, cy: naturalSize.height / 2 })); }}
                                 className="w-full py-1 text-xs text-gray-400 hover:text-white hover:bg-gray-800 rounded border border-gray-700"
                             >
-                                Restablecer
+                                {t('anatomy.viewer.tools.reset', 'Restablecer')}
                             </button>
                         </div>
                     )}
@@ -701,23 +771,42 @@ const AnatomyInteractiveViewer = ({
 
                     <button
                         onClick={() => {
+                            if (disableAtlasMode) return;
                             const newMode = viewMode === 'default' ? 'atlas' : 'default';
                             setViewMode(newMode);
                             if (newMode === 'atlas') {
-                                // Zoom out to create side margins ("place where there is no image")
+                                // Calculate scale dynamically to ensure margins
+                                // Responsive Logic:
+                                const isMobile = containerSize.width < 768;
+                                const marginFactor = isMobile ? 0.05 : 0.15; // 5% vs 15% margin
+
+                                const minMargin = Math.max(isMobile ? 20 : 80, containerSize.width * marginFactor);
+                                const availableForImage = Math.max(100, containerSize.width - (minMargin * 2));
+
+                                // Approximate scale
+                                const scaleFactor = availableForImage / containerSize.width;
+                                const safeScale = Math.min(isMobile ? 0.95 : 0.9, Math.max(0.3, scaleFactor));
+
                                 setViewport(p => ({
                                     ...p,
-                                    scale: p.scale * 0.75, // reduce scale by 25%
+                                    scale: safeScale,
                                     cx: naturalSize.width / 2, // centers the view
                                     cy: naturalSize.height / 2
                                 }));
                             }
                         }}
-                        className={`flex items-center space-x-2 px-4 py-1.5 rounded-full transition-all duration-200 border ${viewMode === 'atlas' ? 'bg-indigo-600 border-indigo-500 text-white shadow-lg shadow-indigo-900/50 scale-105' : 'bg-gray-800 border-gray-700 text-gray-300 hover:bg-gray-700 hover:border-gray-600'}`}
-                        title={viewMode === 'default' ? "Modo Atlas" : "Modo Normal"}
+                        disabled={disableAtlasMode}
+                        className={`flex items-center space-x-2 px-4 py-1.5 rounded-full transition-all duration-200 border 
+                            ${disableAtlasMode
+                                ? 'bg-gray-800 border-gray-700 text-gray-600 cursor-not-allowed opacity-50'
+                                : viewMode === 'atlas'
+                                    ? 'bg-indigo-600 border-indigo-500 text-white shadow-lg shadow-indigo-900/50 scale-105'
+                                    : 'bg-gray-800 border-gray-700 text-gray-300 hover:bg-gray-700 hover:border-gray-600'
+                            }`}
+                        title={disableAtlasMode ? 'No disponible en Quiz' : (viewMode === 'default' ? t('anatomy.viewer.tools.atlasMode', "Modo Atlas") : t('anatomy.viewer.tools.normalMode', "Modo Normal"))}
                     >
                         <BookOpen className="w-4 h-4" />
-                        <span className="text-xs font-bold uppercase tracking-wide">Modo Atlas</span>
+                        <span className="text-xs font-bold uppercase tracking-wide">{t('anatomy.viewer.tools.atlasMode', 'Modo Atlas')}</span>
                     </button>
 
                     <div className="w-px h-6 bg-gray-700 mx-2" />
@@ -893,8 +982,8 @@ const AnatomyInteractiveViewer = ({
                         <Layers className="w-4 h-4 mr-2" /> {t('anatomy.viewer.structures')}
                     </div>
                     <div className="overflow-y-auto flex-1 p-2 space-y-1">
-                        <button onClick={() => setVisibleCategories(ANATOMY_CATEGORIES.reduce((a, c) => ({ ...a, [c.id]: true }), {}))} className="w-full text-xs text-left px-2 py-1 text-gray-500 hover:text-white">Ver Todo</button>
-                        <button onClick={() => setVisibleCategories({})} className="w-full text-xs text-left px-2 py-1 text-gray-500 hover:text-white">Ocultar Todo</button>
+                        <button onClick={() => setVisibleCategories(ANATOMY_CATEGORIES.reduce((a, c) => ({ ...a, [c.id]: true }), {}))} className="w-full text-xs text-left px-2 py-1 text-gray-500 hover:text-white">{t('anatomy.viewer.sidebar.showAll', 'Ver Todo')}</button>
+                        <button onClick={() => setVisibleCategories({})} className="w-full text-xs text-left px-2 py-1 text-gray-500 hover:text-white">{t('anatomy.viewer.sidebar.hideAll', 'Ocultar Todo')}</button>
 
                         <div className="my-1 border-t border-gray-800"></div>
                         <button
@@ -903,7 +992,7 @@ const AnatomyInteractiveViewer = ({
                         >
                             <span className="flex items-center text-xs font-medium">
                                 <Hexagon className="w-4 h-4 mr-2" />
-                                Zonas Anatómicas
+                                {t('anatomy.viewer.sidebar.zones', 'Zonas Anatómicas')}
                             </span>
                             {showZones ? <Eye className="w-3 h-3" /> : <EyeOff className="w-3 h-3" />}
                         </button>
@@ -920,7 +1009,7 @@ const AnatomyInteractiveViewer = ({
                     </div>
                 </div>
             </div>
-        </div>
+        </div >
     );
 };
 

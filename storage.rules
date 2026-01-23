@@ -47,6 +47,17 @@ service firebase.storage {
       allow write: if isAdmin() || isSuperAdmin();
     }
 
+    // New Rules for Case Discussion and Attachments
+    match /case-discussion/{allPaths=**} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin() || isSuperAdmin();
+    }
+
+    match /case-attachments/{allPaths=**} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin() || isSuperAdmin();
+    }
+
     // 4. User Avatars
     // Path: avatars/{uid}/{filename}
     // Read: Authenticated users (to see profile pics)

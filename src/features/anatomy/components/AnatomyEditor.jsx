@@ -32,13 +32,15 @@ import {
     Maximize,
     Hand,
     Globe,
-    Magnet
+    Magnet,
+    Keyboard,
+    X,
+    HelpCircle
 } from 'lucide-react';
 import { getSmoothPath } from '../../../utils/svgUtils';
 import { ANATOMY_CATEGORIES } from '../../../utils/anatomyConstants';
 import { translateAnatomyTerm } from '../../../utils/anatomyTranslations';
-import { httpsCallable } from 'firebase/functions';
-import { functions } from '../../../config/firebase';
+import { translationService } from '../../../services/translationService';
 
 
 
@@ -91,6 +93,10 @@ const AnatomyEditor = ({ series, onUpdate, onReverseOrder, onImageIndexChange })
     // Size State
     const [naturalSize, setNaturalSize] = useState({ width: 0, height: 0 });
     const [containerSize, setContainerSize] = useState({ width: 0, height: 0 });
+
+    // Custom Confirmation Modal State
+    const [confirmModal, setConfirmModal] = useState(null);
+    const [showShortcuts, setShowShortcuts] = useState(false);
 
     const containerRef = useRef(null);
     const canvasRef = useRef(null);
@@ -502,6 +508,50 @@ const AnatomyEditor = ({ series, onUpdate, onReverseOrder, onImageIndexChange })
         }
     };
 
+    const handlePropagateAnnotation = (id, count) => {
+        const structureIndex = seriesStructures.findIndex(s => s.id === id);
+        if (structureIndex >= 0) {
+            const newStructures = [...seriesStructures];
+            const structure = { ...newStructures[structureIndex] };
+            const currentLocation = structure.locations[currentImageIndex];
+
+            if (!currentLocation) return;
+
+            const newLocations = { ...structure.locations };
+            const start = Number(currentImageIndex) + 1;
+            const end = Math.min(series.images.length, start + count);
+
+            for (let i = start; i < end; i++) {
+                newLocations[i] = JSON.parse(JSON.stringify(currentLocation));
+            }
+
+            newStructures[structureIndex] = { ...structure, locations: newLocations };
+            onUpdate({ structures: newStructures });
+        }
+    };
+
+    const handlePropagateBackward = (id, count) => {
+        const structureIndex = seriesStructures.findIndex(s => s.id === id);
+        if (structureIndex >= 0) {
+            const newStructures = [...seriesStructures];
+            const structure = { ...newStructures[structureIndex] };
+            const currentLocation = structure.locations[currentImageIndex];
+
+            if (!currentLocation) return;
+
+            const newLocations = { ...structure.locations };
+            const start = Math.max(0, Number(currentImageIndex) - count);
+            const end = Number(currentImageIndex);
+
+            for (let i = start; i < end; i++) {
+                newLocations[i] = JSON.parse(JSON.stringify(currentLocation));
+            }
+
+            newStructures[structureIndex] = { ...structure, locations: newLocations };
+            onUpdate({ structures: newStructures });
+        }
+    };
+
 
     // --- INTERACTION HANDLERS (SVG Coordinate System) ---
     const getSVGPoint = (e) => {
@@ -531,30 +581,41 @@ const AnatomyEditor = ({ series, onUpdate, onReverseOrder, onImageIndexChange })
             ? "¿Estás seguro de eliminar TODAS las anotaciones de esta serie?"
             : `¿Estás seguro de eliminar todas las anotaciones de la categoría "${category}"?`;
 
-        if (!window.confirm(confirmMsg)) return;
+        setConfirmModal({
+            message: confirmMsg,
+            onConfirm: () => {
+                // 1. Clear Legacy Annotations
+                const updatedImages = series.images.map(img => ({
+                    ...img,
+                    annotations: (img.annotations || []).filter(ann => {
+                        if (category === 'all') return false;
+                        return ann.category !== category;
+                    })
+                }));
 
-        // 1. Clear Legacy Annotations
-        const updatedImages = series.images.map(img => ({
-            ...img,
-            annotations: (img.annotations || []).filter(ann => {
-                if (category === 'all') return false;
-                return ann.category !== category;
-            })
-        }));
+                // 2. Clear Series Structures
+                const updatedStructures = (series.structures || []).filter(struct => {
+                    if (category === 'all') return false;
+                    return struct.category !== category;
+                });
 
-        // 2. Clear Series Structures
-        const updatedStructures = (series.structures || []).filter(struct => {
-            if (category === 'all') return false;
-            return struct.category !== category;
+                onUpdate({
+                    images: updatedImages,
+                    structures: updatedStructures
+                });
+
+                // Reset selection if the selected annotation was deleted
+                if (selectedAnnotationId) {
+                    const stillExists = updatedStructures.some(s => s.id === selectedAnnotationId);
+                    if (!stillExists) setSelectedAnnotationId(null);
+                }
+
+                setShowManagement(false);
+                setConfirmModal(null);
+            }
         });
-
-        onUpdate({
-            images: updatedImages,
-            structures: updatedStructures
-        });
-
-        setShowManagement(false);
     };
+
     const handleMouseDown = (e) => {
         // Panning Logic handled separately or integrated?
         // Button 0: Left, 1: Middle, 2: Right
@@ -668,6 +729,17 @@ const AnatomyEditor = ({ series, onUpdate, onReverseOrder, onImageIndexChange })
                     newPoints[dragging.pointIndex] = { x: nx, y: ny };
                     handleAnnotationUpdate(dragging.id, { points: newPoints, _forceCurrent: true });
                 }
+            } else if (dragging.mode === 'move' && dragging.initialPoints) {
+                // Polygon Block Move
+                if (!dragging.startPt) return;
+                const dx = pt.x - dragging.startPt.x;
+                const dy = pt.y - dragging.startPt.y;
+
+                const newPoints = dragging.initialPoints.map(p => ({
+                    x: p.x + dx,
+                    y: p.y + dy
+                }));
+                handleAnnotationUpdate(dragging.id, { points: newPoints, _forceCurrent: true });
             } else {
                 // Point or Line Endpoint? Line endpoints usually separate?
                 // Current dragging logic for Point
@@ -749,6 +821,20 @@ const AnatomyEditor = ({ series, onUpdate, onReverseOrder, onImageIndexChange })
 
     return (
         <div className="flex flex-col h-[700px] border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden bg-gray-900">
+            {/* Header Bar with Help */}
+            <div className="bg-gray-950 border-b border-gray-800 p-1 px-3 flex justify-between items-center select-none">
+                <div className="flex items-center space-x-2">
+                    <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">Editor Canvas</span>
+                </div>
+                <button
+                    onClick={() => setShowShortcuts(true)}
+                    className="flex items-center space-x-1 text-xs text-gray-400 hover:text-indigo-400 transition-colors"
+                >
+                    <Keyboard className="w-3 h-3" />
+                    <span>Atajos de Teclado</span>
+                </button>
+            </div>
+
             {/* Top Toolbar */}
             <div className="bg-gray-800 p-2 border-b border-gray-700 flex items-center justify-between">
                 <div className="flex space-x-2">
@@ -758,7 +844,7 @@ const AnatomyEditor = ({ series, onUpdate, onReverseOrder, onImageIndexChange })
                     <button onClick={() => setSelectedTool('pan')} className={`p-2 rounded ${selectedTool === 'pan' ? 'bg-indigo-900 text-indigo-300' : 'text-gray-400 hover:bg-gray-700'}`} title="Mover Vista">
                         <Hand className="w-5 h-5" />
                     </button>
-                    <div className="w-px h-6 bg-gray-700 mx-2" />
+                    <div className="w-px h-6 bg-gray-700 mx-1" />
                     <button onClick={() => setSelectedTool('point')} className={`p-2 rounded ${selectedTool === 'point' ? 'bg-indigo-900 text-indigo-300' : 'text-gray-400 hover:bg-gray-700'}`} title="Añadir Punto">
                         <CircleDot className="w-5 h-5" />
                     </button>
@@ -812,7 +898,7 @@ const AnatomyEditor = ({ series, onUpdate, onReverseOrder, onImageIndexChange })
                         title="Modo Imán: Ajuste automático a bordes"
                     >
                         <Magnet className="w-5 h-5" />
-                        <span className="text-xs font-medium hidden sm:inline">Imán</span>
+                        <span className="text-xs font-medium hidden lg:inline">Imán</span>
                     </button>
                     <button
                         onClick={() => setPropagationRange(prev => prev === 'current' ? 'forward' : 'current')}
@@ -820,23 +906,25 @@ const AnatomyEditor = ({ series, onUpdate, onReverseOrder, onImageIndexChange })
                         title={propagationRange === 'forward' ? "Editando hacia adelante (Click para solo actual)" : "Editar solo actual (Click para editar hacia adelante)"}
                     >
                         <FastForward className="w-5 h-5" />
-                        <span className="text-xs font-medium hidden sm:inline">Adelante</span>
+                        <span className="text-xs font-medium hidden lg:inline">Adelante</span>
                     </button>
                 </div>
 
                 {/* Top Right Controls */}
-                <div className="flex items-center space-x-4">
+                <div className="flex items-center space-x-2">
                     <div className="flex items-center space-x-2">
-                        <span className="text-sm text-gray-400">Categoría:</span>
+                        <span className="text-sm text-gray-400 hidden xl:inline">Categoría:</span>
+                        <span className="text-sm text-gray-400 xl:hidden">Cat:</span>
                         <select value={selectedCategory} onChange={(e) => setSelectedCategory(e.target.value)} className="text-sm bg-gray-700 border-gray-600 text-white rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
                             {ANATOMY_CATEGORIES.map(cat => (
                                 <option key={cat.id} value={cat.id}>{cat.label}</option>
                             ))}
                         </select>
                     </div>
-                    <div className="w-px h-6 bg-gray-600 mx-2" />
+                    <div className="w-px h-6 bg-gray-600 mx-1" />
                     <div className="flex items-center space-x-2">
-                        <span className="text-sm text-gray-400">Propagación:</span>
+                        <span className="text-sm text-gray-400 hidden xl:inline">Propagación:</span>
+                        <span className="text-sm text-gray-400 xl:hidden">Prop:</span>
                         <select value={propagationRange} onChange={(e) => setPropagationRange(e.target.value)} className="text-sm bg-gray-700 border-gray-600 text-white rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500" title="Replicar estructura">
                             <option value="current">Solo Actual</option>
                             <option value="10">Siguientes 10</option>
@@ -911,14 +999,29 @@ const AnatomyEditor = ({ series, onUpdate, onReverseOrder, onImageIndexChange })
                                                     <path d={getSmoothPath(ann.points)} fill="none" stroke="transparent" strokeWidth="15" vectorEffect="non-scaling-stroke"
                                                         transform={`scale(${naturalSize.width / 100} ${naturalSize.height / 100})`}
                                                         onClick={(e) => {
-                                                            if (e.ctrlKey) {
+                                                            if (e.ctrlKey && !dragging) {
                                                                 e.stopPropagation();
                                                                 const pt = getSVGPoint(e);
                                                                 if (pt) insertPolygonPoint(ann.id, pt);
                                                             }
                                                         }}
+                                                        onMouseDown={(e) => {
+                                                            if (e.ctrlKey) {
+                                                                e.stopPropagation();
+                                                                // Start block drag
+                                                                const pt = getSVGPoint(e);
+                                                                if (pt) {
+                                                                    setDragging({
+                                                                        id: ann.id,
+                                                                        mode: 'move',
+                                                                        startPt: pt,
+                                                                        initialPoints: JSON.parse(JSON.stringify(ann.points))
+                                                                    });
+                                                                }
+                                                            }
+                                                        }}
                                                         style={{ cursor: 'crosshair' }}
-                                                        title="Ctrl+Click para agregar punto"
+                                                        title="Ctrl+Click para agregar punto, Ctrl+Arrastrar para mover todo"
                                                     />
                                                     <path d={getSmoothPath(ann.points)} fill={color} fillOpacity="0.3" stroke={color} strokeWidth="2" vectorEffect="non-scaling-stroke"
                                                         transform={`scale(${naturalSize.width / 100} ${naturalSize.height / 100})`}
@@ -927,22 +1030,29 @@ const AnatomyEditor = ({ series, onUpdate, onReverseOrder, onImageIndexChange })
                                                     {isSelected && ann.points.map((p, idx) => {
                                                         const px = p.x * naturalSize.width;
                                                         const py = p.y * naturalSize.height;
+                                                        // RESTORED: Larger radius for visibility (User request)
                                                         const r = (naturalSize.width / 200) / viewport.scale;
                                                         return (
-                                                            <circle key={idx} cx={px} cy={py} r={r} fill="white" stroke={color} strokeWidth={r / 2}
-                                                                onMouseDown={(e) => {
-                                                                    if (e.ctrlKey) {
-                                                                        e.stopPropagation();
-                                                                        deletePolygonPoint(ann.id, idx);
-                                                                    } else {
-                                                                        e.stopPropagation();
-                                                                        setDragging({ id: ann.id, pointIndex: idx });
-                                                                    }
-                                                                }}
-                                                                style={{ cursor: 'move' }}
-                                                                title="Ctrl+Click para borrar punto"
-                                                            />
+                                                            <g key={idx}>
+                                                                {/* Hitbox for easier grabbing */}
+                                                                <circle cx={px} cy={py} r={r * 2.5} fill="transparent"
+                                                                    onMouseDown={(e) => {
+                                                                        if (e.ctrlKey) {
+                                                                            e.stopPropagation();
+                                                                            deletePolygonPoint(ann.id, idx);
+                                                                        } else {
+                                                                            e.stopPropagation();
+                                                                            setDragging({ id: ann.id, pointIndex: idx });
+                                                                        }
+                                                                    }}
+                                                                    style={{ cursor: 'move' }}
+                                                                    title="Arrastrar para mover, Ctrl+Click para borrar"
+                                                                />
+                                                                {/* Visible Point */}
+                                                                <circle cx={px} cy={py} r={r} fill="white" stroke={color} strokeWidth={r / 3} pointerEvents="none" />
+                                                            </g>
                                                         );
+
                                                     })}
                                                 </g>
                                             );
@@ -950,7 +1060,16 @@ const AnatomyEditor = ({ series, onUpdate, onReverseOrder, onImageIndexChange })
                                         return null;
                                     })}
                                     {drawingLine && <line x1={drawingLine.startX * naturalSize.width} y1={drawingLine.startY * naturalSize.height} x2={getSVGPoint({ clientX: dragging?.lx || 0, clientY: dragging?.ly || 0 })?.x} stroke="white" strokeWidth="2" />}
-                                    {currentPolygonPoints.length > 0 && <g> <path d={getSmoothPath(currentPolygonPoints.map(p => ({ x: p.x * 100, y: p.y * 100 })))} fill="none" stroke="yellow" strokeWidth="2" vectorEffect="non-scaling-stroke" transform={`scale(${naturalSize.width / 100} ${naturalSize.height / 100})`} /> {currentPolygonPoints.map((p, i) => (<circle key={i} cx={p.x * naturalSize.width} cy={p.y * naturalSize.height} r={5} fill="yellow" />))} </g>}
+                                    {currentPolygonPoints.length > 0 && (
+                                        <g>
+                                            <path d={getSmoothPath(currentPolygonPoints.map(p => ({ x: p.x * 100, y: p.y * 100 })))} fill="none" stroke="yellow" strokeWidth="2" vectorEffect="non-scaling-stroke" transform={`scale(${naturalSize.width / 100} ${naturalSize.height / 100})`} />
+                                            {currentPolygonPoints.map((p, i) => {
+                                                // Dynamic radius for creation points - smaller than editable ones
+                                                const r = (naturalSize.width / 300) / (viewport.scale || 1);
+                                                return <circle key={i} cx={p.x * naturalSize.width} cy={p.y * naturalSize.height} r={r} fill="yellow" stroke="black" strokeWidth={r / 4} />;
+                                            })}
+                                        </g>
+                                    )}
                                 </g>
                             </svg>
                         ) : (
@@ -1051,10 +1170,42 @@ const AnatomyEditor = ({ series, onUpdate, onReverseOrder, onImageIndexChange })
                         {selectedAnnotationId ? (
                             <div className="space-y-4">
                                 <div>
-                                    <label className="block text-xs font-medium text-gray-400 mb-1">
-                                        Etiqueta (ES) / Label (EN)
-                                    </label>
-                                    <div className="grid grid-cols-2 gap-2">
+                                    <div className="flex justify-between items-center mb-1">
+                                        <label className="block text-xs font-medium text-gray-400">
+                                            Etiqueta (ES) / Label (EN)
+                                        </label>
+                                        <button
+                                            onClick={async () => {
+                                                const ann = annotations.find(a => a.id === selectedAnnotationId);
+                                                if (!ann || !ann.label) return;
+
+                                                setIsTranslating(true);
+                                                try {
+                                                    // 1. Try local dictionary first
+                                                    const dictTranslation = translateAnatomyTerm(ann.label);
+                                                    if (dictTranslation) {
+                                                        handleAnnotationUpdate(selectedAnnotationId, { labelEn: dictTranslation });
+                                                    } else {
+                                                        // 2. Fallback to AI
+                                                        const translation = await translationService.translate(ann.label);
+                                                        handleAnnotationUpdate(selectedAnnotationId, { labelEn: translation });
+                                                    }
+                                                } catch (error) {
+                                                    console.error("Label translation failed:", error);
+                                                    alert("Error al traducir etiqueta: " + (error.message || "Intentelo nuevamente"));
+                                                } finally {
+                                                    setIsTranslating(false);
+                                                }
+                                            }}
+                                            disabled={isTranslating}
+                                            className={`text-xs flex items-center ${isTranslating ? 'text-gray-500 cursor-wait' : 'text-indigo-400 hover:text-indigo-300'}`}
+                                            title="Traducir etiqueta automáticamente"
+                                        >
+                                            {isTranslating ? <Loader2 className="w-3 h-3 mr-1 animate-spin" /> : <Globe className="w-3 h-3 mr-1" />}
+                                            Traducir
+                                        </button>
+                                    </div>
+                                    <div className="grid grid-cols-1 gap-2">
                                         <input
                                             type="text"
                                             placeholder="Español"
@@ -1105,11 +1256,11 @@ const AnatomyEditor = ({ series, onUpdate, onReverseOrder, onImageIndexChange })
                                                 if (ann.description) {
                                                     setIsTranslating(true);
                                                     try {
-                                                        const translateText = httpsCallable(functions, 'translateText');
-                                                        const result = await translateText({ text: ann.description, target: 'en' });
-                                                        handleAnnotationUpdate(selectedAnnotationId, { descriptionEn: result.data.translation });
+                                                        const translation = await translationService.translate(ann.description);
+                                                        handleAnnotationUpdate(selectedAnnotationId, { descriptionEn: translation });
                                                     } catch (error) {
                                                         console.error("Translation failed:", error);
+                                                        alert("Error al traducir descripción: " + (error.message || "Unknown error"));
                                                     } finally {
                                                         setIsTranslating(false);
                                                     }
@@ -1144,7 +1295,28 @@ const AnatomyEditor = ({ series, onUpdate, onReverseOrder, onImageIndexChange })
                                         />
                                     </div>
                                 </div>
+
+                                {/* Propagation Control */}
                                 <div className="pt-4 border-t border-gray-700 mt-4 space-y-2">
+                                    <button
+                                        onClick={() => handlePropagateAnnotation(selectedAnnotationId, 5)}
+                                        className="w-full py-2 px-4 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 flex items-center justify-center transition-colors shadow-sm mb-2"
+                                        title="Copiar esta anotación en las próximas 5 imágenes"
+                                    >
+                                        <FastForward className="w-4 h-4 mr-2" />
+                                        Propagar en 5 más
+                                    </button>
+                                    <button
+                                        onClick={() => handlePropagateBackward(selectedAnnotationId, 5)}
+                                        className="w-full py-2 px-4 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 flex items-center justify-center transition-colors shadow-sm mb-2"
+                                        title="Copiar esta anotación en las 5 imágenes anteriores"
+                                    >
+                                        <FastForward className="w-4 h-4 mr-2 rotate-180" />
+                                        Propagar hacia atrás 5
+                                    </button>
+
+                                    <div className="w-full h-px bg-gray-700 my-2"></div>
+
                                     <button
                                         onClick={() => handleDeleteAnnotation(selectedAnnotationId, 'current')}
                                         className="w-full py-2 px-4 bg-red-900/30 text-red-400 rounded-md hover:bg-red-900/50 flex items-center justify-center transition-colors"
@@ -1208,6 +1380,95 @@ const AnatomyEditor = ({ series, onUpdate, onReverseOrder, onImageIndexChange })
                     </div>
                 </div>
             </div>
+
+            {/* Custom Confirmation Modal */}
+            {confirmModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+                    <div className="bg-gray-800 border border-gray-700 rounded-lg p-6 max-w-sm w-full shadow-xl">
+                        <h3 className="text-lg font-semibold text-white mb-2">Confirmar Acción</h3>
+                        <p className="text-sm text-gray-300 mb-6">{confirmModal.message}</p>
+                        <div className="flex justify-end space-x-3">
+                            <button
+                                onClick={() => setConfirmModal(null)}
+                                className="px-4 py-2 text-sm text-gray-400 hover:text-white transition-colors"
+                            >
+                                Cancelar
+                            </button>
+                            <button
+                                onClick={() => {
+                                    confirmModal.onConfirm();
+                                }}
+                                className="px-4 py-2 text-sm bg-red-600 text-white rounded hover:bg-red-700 transition-colors"
+                            >
+                                Borrar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+            {/* Keyboard Shortcuts Modal */}
+            {showShortcuts && (
+                <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 backdrop-blur-sm" onClick={() => setShowShortcuts(false)}>
+                    <div className="bg-gray-800 border border-gray-700 rounded-lg shadow-2xl max-w-md w-full m-4 overflow-hidden" onClick={e => e.stopPropagation()}>
+                        <div className="flex justify-between items-center p-4 border-b border-gray-700 bg-gray-900/50">
+                            <h3 className="text-lg font-semibold text-white flex items-center">
+                                <Keyboard className="w-5 h-5 mr-2 text-indigo-400" />
+                                Atajos de Teclado
+                            </h3>
+                            <button onClick={() => setShowShortcuts(false)} className="text-gray-400 hover:text-white transition-colors">
+                                <X className="w-5 h-5" />
+                            </button>
+                        </div>
+                        <div className="p-4 space-y-4 text-sm">
+                            <div>
+                                <h4 className="text-xs font-bold text-gray-500 uppercase mb-2">Navegación</h4>
+                                <div className="grid grid-cols-2 gap-2 text-gray-300">
+                                    <div className="flex justify-between"><span>Cambiar Imagen</span> <span className="font-mono bg-gray-700 px-1 rounded text-xs">Rueda Mouse</span></div>
+                                    <div className="flex justify-between"><span>Zoom</span> <span className="font-mono bg-gray-700 px-1 rounded text-xs">Ctrl + Rueda</span></div>
+                                    <div className="flex justify-between"><span>Pan (Mover)</span> <span className="font-mono bg-gray-700 px-1 rounded text-xs">Click Central</span></div>
+                                </div>
+                            </div>
+
+                            <div>
+                                <h4 className="text-xs font-bold text-gray-500 uppercase mb-2">Edición de Polígonos</h4>
+                                <div className="space-y-2 text-gray-300">
+                                    <div className="flex justify-between items-center">
+                                        <span>Insertar punto en línea</span>
+                                        <span className="font-mono bg-gray-700 px-1 rounded text-xs">Ctrl + Click (Borde)</span>
+                                    </div>
+                                    <div className="flex justify-between items-center">
+                                        <span>Eliminar punto</span>
+                                        <span className="font-mono bg-gray-700 px-1 rounded text-xs">Ctrl + Click (Punto)</span>
+                                    </div>
+                                    <div className="flex justify-between items-center">
+                                        <span>Mover forma completa</span>
+                                        <span className="font-mono bg-gray-700 px-1 rounded text-xs">Ctrl + Arrastrar</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div>
+                                <h4 className="text-xs font-bold text-gray-500 uppercase mb-2">General</h4>
+                                <div className="space-y-2 text-gray-300">
+                                    <div className="flex justify-between items-center">
+                                        <span>Eliminar selección</span>
+                                        <span className="font-mono bg-gray-700 px-1 rounded text-xs">Supr / Delete</span>
+                                    </div>
+                                    <div className="flex justify-between items-center">
+                                        <span>Cancelar / Deseleccionar</span>
+                                        <span className="font-mono bg-gray-700 px-1 rounded text-xs">Esc</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div className="p-3 bg-gray-900/50 border-t border-gray-700 text-center">
+                            <button onClick={() => setShowShortcuts(false)} className="text-xs text-indigo-400 hover:text-indigo-300">
+                                Entendido
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div >
     );
 

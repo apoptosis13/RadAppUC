@@ -19,7 +19,11 @@ export const anatomyService = {
     getModules: async (region = null) => {
         try {
             let q = collection(db, COLLECTION_NAME);
-            if (region) {
+            if (Array.isArray(region)) {
+                // Support multiple regions
+                q = query(q, where('region', 'in', region));
+            } else if (region) {
+                // Support single region (legacy/backward compatibility)
                 q = query(q, where('region', '==', region));
             }
             const snapshot = await getDocs(q);

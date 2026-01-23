@@ -7,7 +7,7 @@ import QuizResults from './components/QuizResults';
 import { Loader2, AlertCircle } from 'lucide-react';
 
 const QuizModule = ({ diagnosis, difficulty, onClose }) => {
-    const { t } = useTranslation();
+    const { t, i18n } = useTranslation();
     const [gameState, setGameState] = useState('START'); // START, LOADING, PLAYING, RESULTS
     const [questions, setQuestions] = useState([]);
     const [score, setScore] = useState(0);
@@ -17,14 +17,14 @@ const QuizModule = ({ diagnosis, difficulty, onClose }) => {
         setGameState('LOADING');
         setError(null);
         try {
-            const quizData = await quizService.generateQuiz(diagnosis, difficulty);
+            const quizData = await quizService.generateQuiz(diagnosis, difficulty, i18n.language);
             setQuestions(quizData);
             setGameState('PLAYING');
         } catch (err) {
             console.error("Failed to load quiz", err);
             // Firebase HttpsError wraps custom details in 'details' property
             const serverMessage = err.details?.details || err.details || err.message;
-            setError(`Error: ${JSON.stringify(serverMessage)}`);
+            setError(`${t('aiQuiz.errorPrefix', 'Error: ')}${JSON.stringify(serverMessage)}`);
             setGameState('START');
         }
     };
@@ -59,7 +59,7 @@ const QuizModule = ({ diagnosis, difficulty, onClose }) => {
                     <div className="flex flex-col items-center justify-center py-20">
                         <Loader2 className="w-12 h-12 text-indigo-600 animate-spin mb-4" />
                         <p className="text-gray-600 dark:text-gray-300 animate-pulse">
-                            Generando desafío con IA...
+                            {t('aiQuiz.generating', 'Generando desafío con IA...')}
                         </p>
                     </div>
                 )}

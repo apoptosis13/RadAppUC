@@ -8,6 +8,8 @@ import { ArrowLeft, AlertCircle, Brain, Info } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import i18n from '../../../i18n';
 import QuizModule from '../../quiz/QuizModule';
+import RichTextEditor from '../../../components/RichTextEditor';
+import FileAttachment from '../../../components/FileAttachment';
 
 const CaseDetail = () => {
     const { caseId } = useParams();
@@ -19,6 +21,10 @@ const CaseDetail = () => {
     const { t } = useTranslation();
 
     const [error, setError] = useState(null);
+    const [fontSize, setFontSize] = useState(100);
+
+    const increaseFontSize = () => setFontSize(prev => Math.min(prev + 25, 200));
+    const decreaseFontSize = () => setFontSize(prev => Math.max(prev - 25, 100));
 
     useEffect(() => {
         const fetchCase = async () => {
@@ -80,6 +86,8 @@ const CaseDetail = () => {
         );
     }
 
+    const isEnglish = i18n.language?.startsWith('en');
+
     return (
         <div className="min-h-screen bg-black text-gray-100 flex flex-col">
             {/* Immersive Header */}
@@ -91,7 +99,7 @@ const CaseDetail = () => {
                     <div>
                         <h1 className="text-xl font-bold text-white tracking-tight">
                             {(caseItem.titleKey && t(caseItem.titleKey)) ||
-                                (i18n.language === 'en' && caseItem.title_en) ||
+                                (isEnglish && caseItem.title_en) ||
                                 caseItem.title}
                         </h1>
                         <div className="flex items-center space-x-3 text-xs text-gray-400 mt-1">
@@ -111,26 +119,77 @@ const CaseDetail = () => {
             <div className="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-0 overflow-hidden h-[calc(100vh-80px)]">
                 {/* Left Column - Image (Main Stage) */}
                 <div className="lg:col-span-8 bg-black relative flex flex-col border-r border-gray-800">
-                    <div className="flex-1 w-full relative overflow-hidden p-4">
-                        <ImageViewer
-                            images={caseItem.images || (caseItem.image ? [caseItem.image] : [])}
-                            imageStacks={caseItem.imageStacks || []}
-                            alt={caseItem.title || t(caseItem.titleKey)}
-                        />
-                    </div>
+                    {(() => {
+                        const showDiscussion = isDiagnosisSubmitted && (caseItem.discussionContent || caseItem.caseComments || (caseItem.attachments && caseItem.attachments.length > 0));
 
-                    {/* Case Comments - Moved Here */}
-                    {isDiagnosisSubmitted && caseItem.caseComments && (
-                        <div className="bg-gray-900/90 border-t border-gray-800 p-6 animate-in slide-in-from-bottom duration-500 max-h-[30vh] overflow-y-auto custom-scrollbar">
-                            <h3 className="text-sm font-bold text-yellow-400 mb-2 flex items-center uppercase tracking-wider">
-                                <Info className="w-4 h-4 mr-2" />
-                                Comentarios del Caso
-                            </h3>
-                            <p className="text-gray-300 leading-relaxed text-sm whitespace-pre-line max-w-4xl">
-                                {caseItem.caseComments}
-                            </p>
-                        </div>
-                    )}
+                        return (
+                            <>
+                                <div className={`w-full relative overflow-hidden p-4 transition-all duration-500 ease-in-out ${showDiscussion ? 'h-[55%]' : 'flex-1'}`}>
+                                    <ImageViewer
+                                        images={caseItem.images || (caseItem.image ? [caseItem.image] : [])}
+                                        imageStacks={caseItem.imageStacks || []}
+                                        alt={caseItem.title || t(caseItem.titleKey)}
+                                    />
+                                </div>
+
+                                {/* Case Discussion - Replaces Case Comments */}
+                                {showDiscussion && (
+                                    <div className="bg-gray-900/90 border-t border-gray-800 p-6 animate-in slide-in-from-bottom duration-500 overflow-y-auto custom-scrollbar flex-1 min-h-0">
+                                        <div className="flex items-center justify-between mb-4">
+                                            <h3 className="text-sm font-bold text-yellow-400 flex items-center uppercase tracking-wider">
+                                                <Info className="w-4 h-4 mr-2" />
+                                                {t('cases.discussion', 'Discusión del Caso')}
+                                            </h3>
+                                            {/* Font Size Controls */}
+                                            <div className="flex items-center bg-gray-800 rounded-lg p-1 space-x-1">
+                                                <button
+                                                    onClick={decreaseFontSize}
+                                                    disabled={fontSize <= 100}
+                                                    className="p-1 px-2 text-xs font-medium text-gray-400 hover:text-white disabled:opacity-30 transition-colors"
+                                                    title="Reducir tamaño"
+                                                >
+                                                    A-
+                                                </button>
+                                                <span className="text-xs text-gray-500 font-mono w-8 text-center">{fontSize}%</span>
+                                                <button
+                                                    onClick={increaseFontSize}
+                                                    disabled={fontSize >= 200}
+                                                    className="p-1 px-2 text-xs font-medium text-gray-400 hover:text-white disabled:opacity-30 transition-colors"
+                                                    title="Aumentar tamaño"
+                                                >
+                                                    A+
+                                                </button>
+                                            </div>
+                                        </div>
+
+                                        {/* Rich Text Content */}
+                                        <div className="mb-6" style={{ fontSize: `${fontSize}%` }}>
+                                            {((isEnglish && caseItem.discussionContent_en) || caseItem.discussionContent || caseItem.caseComments) ? (
+                                                <RichTextEditor
+                                                    content={(isEnglish && caseItem.discussionContent_en)
+                                                        ? caseItem.discussionContent_en
+                                                        : (caseItem.discussionContent || caseItem.caseComments)}
+                                                    editable={false}
+                                                    editorClassName="prose dark:prose-invert max-w-none focus:outline-none p-0 text-gray-300 bg-transparent"
+                                                />
+                                            ) : null}
+                                        </div>
+
+                                        {/* Attachments */}
+                                        {caseItem.attachments && caseItem.attachments.length > 0 && (
+                                            <div className="mt-4 pt-4 border-t border-gray-800">
+                                                <h4 className="text-xs font-semibold text-gray-500 uppercase mb-3">Material Complementario</h4>
+                                                <FileAttachment
+                                                    attachments={caseItem.attachments}
+                                                    readOnly={true}
+                                                />
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+                            </>
+                        );
+                    })()}
                 </div>
 
                 {/* Right Column - Info & Tools (Sidebar) */}
@@ -144,7 +203,7 @@ const CaseDetail = () => {
                             </h2>
                             <p className="text-gray-300 leading-relaxed text-sm">
                                 {(caseItem.historyKey && t(caseItem.historyKey)) ||
-                                    (i18n.language === 'en' && caseItem.history_en) ||
+                                    (isEnglish && caseItem.history_en) ||
                                     caseItem.history}
                             </p>
                         </div>
@@ -152,7 +211,7 @@ const CaseDetail = () => {
                         {/* Diagnosis Form */}
                         <DiagnosisForm
                             correctDiagnosis={(caseItem.correctDiagnosisKey && t(caseItem.correctDiagnosisKey)) ||
-                                (i18n.language === 'en' && caseItem.correctDiagnosis_en) ||
+                                (isEnglish && caseItem.correctDiagnosis_en) ||
                                 caseItem.correctDiagnosis}
                             caseData={caseItem}
                             onComplete={() => setIsDiagnosisSubmitted(true)}
@@ -162,7 +221,7 @@ const CaseDetail = () => {
                         {isDiagnosisSubmitted && areQuestionsAnswered && (
                             (() => {
                                 const hasEnglish = caseItem.learningObjectives_en && caseItem.learningObjectives_en.some(o => o && o.trim());
-                                const objectives = (i18n.language === 'en' && hasEnglish) ? caseItem.learningObjectives_en : caseItem.learningObjectives;
+                                const objectives = (isEnglish && hasEnglish) ? caseItem.learningObjectives_en : caseItem.learningObjectives;
                                 return objectives && objectives.length > 0 && objectives.some(o => o);
                             })()
                         ) && (
@@ -171,7 +230,7 @@ const CaseDetail = () => {
                                     <ul className="list-disc list-inside text-sm text-blue-200 space-y-1">
                                         {(() => {
                                             const hasEnglish = caseItem.learningObjectives_en && caseItem.learningObjectives_en.some(o => o && o.trim());
-                                            const objectives = (i18n.language === 'en' && hasEnglish) ? caseItem.learningObjectives_en : caseItem.learningObjectives;
+                                            const objectives = (isEnglish && hasEnglish) ? caseItem.learningObjectives_en : caseItem.learningObjectives;
                                             return objectives.map((objective, index) => (
                                                 objective && <li key={index}>{objective}</li>
                                             ));
@@ -189,27 +248,27 @@ const CaseDetail = () => {
                                     </div>
                                 </div>
                                 <h3 className="text-lg font-bold text-white mb-2">
-                                    Desafío de Conocimiento
+                                    {t('aiQuiz.title', 'Desafío de Conocimiento')}
                                 </h3>
                                 <p className="text-sm text-indigo-200 mb-4">
-                                    Pon a prueba lo aprendido con 10 preguntas generadas por IA sobre este caso.
+                                    {t('aiQuiz.description', 'Pon a prueba lo aprendido con 10 preguntas generadas por IA sobre este caso.')}
                                 </p>
                                 <button
                                     onClick={() => setShowQuiz(true)}
                                     className="w-full inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 shadow-sm transition-colors"
                                 >
                                     <Brain className="w-4 h-4 mr-2" />
-                                    Iniciar Quiz con IA
+                                    {t('aiQuiz.startBtn', 'Iniciar Quiz con IA')}
                                 </button>
                             </div>
                         )}
 
                         {/* Questions */}
-                        {!caseItem.hideManualQuestions && ((i18n.language === 'en' && caseItem.questions_en) || caseItem.questions) &&
-                            (((i18n.language === 'en' && caseItem.questions_en) || caseItem.questions).length > 0) && (
+                        {!caseItem.hideManualQuestions && ((isEnglish && caseItem.questions_en) || caseItem.questions) &&
+                            (((isEnglish && caseItem.questions_en) || caseItem.questions).length > 0) && (
                                 <div className="mt-8 pt-6 border-t border-gray-800">
                                     <CaseQuestions
-                                        questions={(i18n.language === 'en' && caseItem.questions_en) ? caseItem.questions_en : caseItem.questions}
+                                        questions={(isEnglish && caseItem.questions_en) ? caseItem.questions_en : caseItem.questions}
                                         onAllQuestionsAnswered={() => setAreQuestionsAnswered(true)}
                                     />
                                 </div>

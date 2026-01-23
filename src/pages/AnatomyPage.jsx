@@ -14,7 +14,7 @@ const AnatomyPage = () => {
 
     const loadModules = async () => {
         try {
-            const modules = await anatomyService.getModules();
+            const modules = await anatomyService.getModules(REGION_IDS);
             setFirestoreModules(modules);
         } catch (error) {
             console.error("Error loading modules:", error);
@@ -60,7 +60,11 @@ const AnatomyPage = () => {
                     'hip': '/thumbnails/hip.png',
                     'cadera': '/thumbnails/hip.png',
                     'ankle': '/thumbnails/ankle.png',
-                    'tobillo': '/thumbnails/ankle.png'
+                    'tobillo': '/thumbnails/ankle.png',
+                    'pubis': '/thumbnails/pubis.png',
+                    'pubic': '/thumbnails/pubis.png',
+                    'pie': '/thumbnails/foot.png',
+                    'foot': '/thumbnails/foot.png'
                 };
 
                 let finalThumbnail = m.thumbnail;

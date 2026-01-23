@@ -99,5 +99,12 @@ service cloud.firestore {
       allow create: if isAuthenticated();
       allow delete: if isAuthenticated();
     }
+    // Quiz Feedback
+    match /quiz_feedback/{feedbackId} {
+      // Authenticated users can submit feedback
+      allow create: if isAuthenticated();
+      // Only Admins can view/manage feedback matches
+      allow read, update, delete: if isAdmin();
+    }
   }
 }

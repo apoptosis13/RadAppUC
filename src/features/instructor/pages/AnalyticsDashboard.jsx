@@ -778,34 +778,62 @@ const AnalyticsDashboard = () => {
                                     <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
                                 </div>
                             ) : userHistory.length > 0 ? (
-                                <table className="min-w-full divide-y divide-gray-200">
-                                    <thead className="bg-gray-50 sticky top-0">
-                                        <tr>
-                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actividad</th>
-                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Detalle</th>
-                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Puntaje</th>
-                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fecha</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="bg-white divide-y divide-gray-200">
-                                        {userHistory.map((h, idx) => (
-                                            <tr key={idx} className="hover:bg-gray-50">
-                                                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 capitalize">
-                                                    {h.type === 'anatomy' ? 'Quiz Anatomía' : 'Caso Clínico'}
-                                                </td>
-                                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                                    {h.moduleTitle || h.caseTitle || 'Sin título'}
-                                                </td>
-                                                <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-indigo-600">
-                                                    {h.score}%
-                                                </td>
-                                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                                    {h.timestamp ? new Date(h.timestamp.seconds * 1000).toLocaleString('es-CL') : 'N/A'}
-                                                </td>
+                                <div className="space-y-6">
+                                    {/* Averages Section */}
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                                        <div className="bg-indigo-50 p-4 rounded-lg border border-indigo-100 flex items-center justify-between">
+                                            <div>
+                                                <p className="text-sm font-medium text-indigo-800">Promedio Anatomía</p>
+                                                <p className="text-xs text-indigo-600 mt-1">Últimos {userHistory.filter(h => h.type === 'anatomy').length} intentos</p>
+                                            </div>
+                                            <div className="text-3xl font-black text-indigo-600">
+                                                {userHistory.filter(h => h.type === 'anatomy').length > 0
+                                                    ? Math.round(userHistory.filter(h => h.type === 'anatomy').reduce((acc, curr) => acc + (curr.score || 0), 0) / userHistory.filter(h => h.type === 'anatomy').length)
+                                                    : 0}
+                                            </div>
+                                        </div>
+                                        <div className="bg-emerald-50 p-4 rounded-lg border border-emerald-100 flex items-center justify-between">
+                                            <div>
+                                                <p className="text-sm font-medium text-emerald-800">Promedio Casos</p>
+                                                <p className="text-xs text-emerald-600 mt-1">Últimos {userHistory.filter(h => h.type === 'case').length} intentos</p>
+                                            </div>
+                                            <div className="text-3xl font-black text-emerald-600">
+                                                {userHistory.filter(h => h.type === 'case').length > 0
+                                                    ? Math.round(userHistory.filter(h => h.type === 'case').reduce((acc, curr) => acc + (curr.score || 0), 0) / userHistory.filter(h => h.type === 'case').length)
+                                                    : 0}
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <table className="min-w-full divide-y divide-gray-200">
+                                        <thead className="bg-gray-50 sticky top-0">
+                                            <tr>
+                                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actividad</th>
+                                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Detalle</th>
+                                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Puntaje</th>
+                                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fecha</th>
                                             </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
+                                        </thead>
+                                        <tbody className="bg-white divide-y divide-gray-200">
+                                            {userHistory.slice(0, 10).map((h, idx) => (
+                                                <tr key={idx} className="hover:bg-gray-50">
+                                                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 capitalize">
+                                                        {h.type === 'anatomy' ? 'Quiz Anatomía' : 'Caso Clínico'}
+                                                    </td>
+                                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                                        {h.moduleTitle || h.caseTitle || 'Sin título'}
+                                                    </td>
+                                                    <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-indigo-600">
+                                                        {h.score}
+                                                    </td>
+                                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                                        {h.timestamp ? new Date(h.timestamp.seconds * 1000).toLocaleString('es-CL') : 'N/A'}
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
                             ) : (
                                 <div className="text-center py-10">
                                     <p className="text-gray-400 italic">No hay historial de evaluaciones registrado para este usuario.</p>

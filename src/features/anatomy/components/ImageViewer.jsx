@@ -1,8 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
 import clsx from 'clsx';
 import { ZoomIn, ZoomOut, Sun, Contrast, RotateCcw, ChevronLeft, ChevronRight, MousePointer2, Layout, Image as ImageIcon, Layers } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 const ImageViewer = ({ images = [], imageStacks = [], alt, overlays = [] }) => {
+    const { t } = useTranslation();
+
     // 1. Merge sources: Create a unified "playlist" of stacks
     const allStacks = React.useMemo(() => {
         const combined = [];
@@ -11,7 +14,7 @@ const ImageViewer = ({ images = [], imageStacks = [], alt, overlays = [] }) => {
         if (images && images.length > 0) {
             combined.push({
                 id: 'main-images',
-                label: 'Imágenes Principales',
+                label: t('anatomy.viewer.mainImages', 'Imágenes Principales'),
                 type: 'images',
                 images: images,
                 rotate: 0,
@@ -24,8 +27,8 @@ const ImageViewer = ({ images = [], imageStacks = [], alt, overlays = [] }) => {
             combined.push(...imageStacks);
         }
 
-        return combined.length > 0 ? combined : [{ id: 'empty', label: 'Sin Imágenes', images: [] }];
-    }, [images, imageStacks]);
+        return combined.length > 0 ? combined : [{ id: 'empty', label: t('anatomy.viewer.noImages', 'Sin Imágenes'), images: [] }];
+    }, [images, imageStacks, t]);
 
     const [activeStackIndex, setActiveStackIndex] = useState(0);
     const [currentIndex, setCurrentIndex] = useState(0);
@@ -100,8 +103,49 @@ const ImageViewer = ({ images = [], imageStacks = [], alt, overlays = [] }) => {
     const handlePrev = () => setCurrentIndex(prev => (prev === 0 ? currentImages.length - 1 : prev - 1));
     const handleNext = () => setCurrentIndex(prev => (prev === currentImages.length - 1 ? 0 : prev + 1));
 
+    const [pan, setPan] = useState({ x: 0, y: 0 });
+    const [isDragging, setIsDragging] = useState(false);
+    const dragStartRef = useRef({ x: 0, y: 0 });
+
+    const handleMouseDown = (e) => {
+        if (zoom > 1) {
+            e.preventDefault(); // Prevent default text selection
+            setIsDragging(true);
+            dragStartRef.current = {
+                x: e.clientX - pan.x,
+                y: e.clientY - pan.y
+            };
+        }
+    };
+
+    const handleMouseMove = (e) => {
+        if (isDragging && zoom > 1) {
+            e.preventDefault();
+            setPan({
+                x: e.clientX - dragStartRef.current.x,
+                y: e.clientY - dragStartRef.current.y
+            });
+        }
+    };
+
+    const handleMouseUp = () => {
+        setIsDragging(false);
+    };
+
+    const handleMouseLeave = () => {
+        setIsDragging(false);
+    };
+
+    // Reset pan when resetTools is called or zoom goes back to 1
+    useEffect(() => {
+        if (zoom === 1) {
+            setPan({ x: 0, y: 0 });
+        }
+    }, [zoom]);
+
     const resetTools = () => {
         setZoom(1);
+        setPan({ x: 0, y: 0 });
         setBrightness(100);
         setContrast(100);
         setCurrentIndex(0);
@@ -111,10 +155,10 @@ const ImageViewer = ({ images = [], imageStacks = [], alt, overlays = [] }) => {
     if (currentIndex >= currentImages.length && currentImages.length > 0) setCurrentIndex(0);
 
     // If no images at all
-    if (!currentImages.length) return <div className="bg-gray-200 dark:bg-gray-800 h-64 flex items-center justify-center text-gray-400">No Image Available</div>;
+    if (!currentImages.length) return <div className="bg-gray-200 dark:bg-gray-800 h-64 flex items-center justify-center text-gray-400">{t('anatomy.viewer.noImageAvailable', 'No Image Available')}</div>;
 
     return (
-        <div className="flex flex-col md:flex-row gap-4 h-[600px] md:h-[700px]">
+        <div className="flex flex-col md:flex-row gap-4 h-full w-full">
             {/* Sidebar for Series Selection */}
             {allStacks.length > 1 && (
                 <div className={clsx(
@@ -122,7 +166,7 @@ const ImageViewer = ({ images = [], imageStacks = [], alt, overlays = [] }) => {
                     showSidebar ? "w-full md:w-64" : "w-0 overflow-hidden md:w-16"
                 )}>
                     <div className="p-3 border-b border-gray-800 bg-gray-900 flex items-center justify-between">
-                        <span className={clsx("text-xs font-bold text-gray-400 uppercase tracking-wider", !showSidebar && "hidden")}>Explorador</span>
+                        <span className={clsx("text-xs font-bold text-gray-400 uppercase tracking-wider", !showSidebar && "hidden")}>{t('anatomy.viewer.explorer', 'Explorador')}</span>
                         <button onClick={() => setShowSidebar(!showSidebar)} className="text-gray-400 hover:text-white">
                             <Layout size={18} />
                         </button>
@@ -147,8 +191,8 @@ const ImageViewer = ({ images = [], imageStacks = [], alt, overlays = [] }) => {
                                     )}
                                 </div>
                                 <div className={clsx("flex-1 min-w-0", !showSidebar && "hidden md:hidden")}>
-                                    <p className="text-sm font-medium truncate">{stack.label || `Serie ${idx + 1}`}</p>
-                                    <p className="text-xs text-gray-500">{stack.images.length} imág.</p>
+                                    <p className="text-sm font-medium truncate">{stack.label || `${t('anatomy.viewer.series', 'Serie')} ${idx + 1}`}</p>
+                                    <p className="text-xs text-gray-500">{stack.images.length} {t('anatomy.viewer.imagesAbbr', 'imág.')}</p>
                                 </div>
                             </button>
                         ))}
@@ -205,12 +249,21 @@ const ImageViewer = ({ images = [], imageStacks = [], alt, overlays = [] }) => {
                 </div>
 
                 {/* Viewport */}
-                <div className="flex-1 relative overflow-hidden bg-black flex items-center justify-center">
+                <div
+                    className={clsx(
+                        "flex-1 relative overflow-hidden bg-black flex items-center justify-center",
+                        zoom > 1 ? (isDragging ? "cursor-grabbing" : "cursor-grab") : "cursor-default"
+                    )}
+                    onMouseDown={handleMouseDown}
+                    onMouseMove={handleMouseMove}
+                    onMouseUp={handleMouseUp}
+                    onMouseLeave={handleMouseLeave}
+                >
                     <div
                         ref={containerRef}
-                        className="relative transition-transform duration-200 ease-out origin-center max-w-full max-h-full"
+                        className="relative transition-transform duration-75 ease-out origin-center max-w-full max-h-full"
                         style={{
-                            transform: `scale(${zoom}) rotate(${currentStack?.rotate || 0}deg) scaleX(${currentStack?.flipH ? -1 : 1})`,
+                            transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom}) rotate(${currentStack?.rotate || 0}deg) scaleX(${currentStack?.flipH ? -1 : 1})`,
                             filter: `brightness(${brightness}%) contrast(${contrast}%)`
                         }}
                     >
@@ -259,7 +312,7 @@ const ImageViewer = ({ images = [], imageStacks = [], alt, overlays = [] }) => {
                     <div className="absolute top-4 right-4 flex flex-col items-end pointer-events-none space-y-1">
                         {activeStackIndex !== -1 && (
                             <div className="bg-black/60 backdrop-blur text-white text-xs px-2 py-1 rounded border border-white/10">
-                                {currentStack?.label || 'Serie'}
+                                {currentStack?.label || t('anatomy.viewer.series', 'Serie')}
                             </div>
                         )}
                         {currentImages.length > 1 && (
@@ -272,7 +325,7 @@ const ImageViewer = ({ images = [], imageStacks = [], alt, overlays = [] }) => {
                     {/* Interaction Hints */}
                     {currentImages.length > 1 && (
                         <div className="absolute bottom-4 left-4 pointer-events-none opacity-50 bg-black/40 px-2 py-1 rounded text-[10px] text-white">
-                            Scroll para navegar
+                            {t('anatomy.viewer.scrollHint', 'Scroll para navegar')}
                         </div>
                     )}
 

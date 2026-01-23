@@ -185,7 +185,7 @@ exports.translateText = functions.https.onCall(async (data, context) => {
         );
     }
 
-    const { text, target } = data;
+    const { text, target, format } = data;
 
     if (!text || typeof text !== 'string') {
         throw new functions.https.HttpsError(
@@ -195,9 +195,10 @@ exports.translateText = functions.https.onCall(async (data, context) => {
     }
 
     const targetLang = target || 'en';
+    const textFormat = format || 'text'; // 'text' or 'html'
 
     try {
-        const [translation] = await translate.translate(text, targetLang);
+        const [translation] = await translate.translate(text, { to: targetLang, from: 'es', format: textFormat });
         return { translation };
     } catch (error) {
         console.error("Translation API Error:", error);
@@ -484,28 +485,47 @@ exports.analyzeFindingsAI_http = functions.https.onRequest((req, res) => {
 // --- AI QUIZ GENERATION ---
 exports.generateQuizAI_v2 = functions.https.onCall(async (data, context) => {
     if (!context.auth) throw new functions.https.HttpsError('unauthenticated', 'Only authenticated users.');
-    const { diagnosis, difficulty } = data;
+    const { diagnosis, difficulty, language } = data;
     if (!diagnosis) throw new functions.https.HttpsError('invalid-argument', 'Missing diagnosis.');
 
     const apiKey = functions.config().gemini?.key;
     if (!apiKey) throw new functions.https.HttpsError('failed-precondition', 'AI Not Configured');
 
-    let contextStr = "Residente de Radiología de 1er año.";
-    if (difficulty === 'Intermediate') contextStr = "Residente de Radiología de 2do año.";
-    else if (difficulty === 'Advanced') contextStr = "Residente de Radiología de 3er año o Fellow.";
+    const isEnglish = language && language.startsWith('en');
 
-    const prompt = `
-        Actúa como un profesor experto en Radiología de nivel Fellow/Subespecialista.
-        Genera un quiz de 10 preguntas de selección múltiple sobre: "${diagnosis}".
-        Nivel del alumno: ${contextStr}
+    let contextStr = isEnglish ? "1st year Radiology Resident." : "Residente de Radiología de 1er año.";
+    if (difficulty === 'Intermediate') contextStr = isEnglish ? "2nd year Radiology Resident." : "Residente de Radiología de 2do año.";
+    else if (difficulty === 'Advanced') contextStr = isEnglish ? "3rd year Radiology Resident or Fellow." : "Residente de Radiología de 3er año o Fellow.";
 
-        Requisitos Críticos:
-        1. Precisión Académica: Las preguntas deben ser técnicamente rigurosas.
-        2. Consistencia Lógica (CRÍTICO): El índice 'correctAnswer' DEBE coincidir inequívocamente con la opción correcta descrita en 'explanation'.
-        3. Explicación: La 'explanation' debe especificar explícitamente por qué la opción correcta es la correcta y por qué las demás son erróneas.
-        4. Formato: JSON Array estricto: [{ "question": "...", "options": ["..."], "correctAnswer": 0, "explanation": "..." }]
-        5. Lenguaje: Español técnico médico natural (Chile).
-    `;
+    let prompt = "";
+
+    if (isEnglish) {
+        prompt = `
+            Act as an expert Radiology Professor (Fellow/Subspecialist level).
+            Generate a 10-question multiple-choice quiz about: "${diagnosis}".
+            Target Audience: ${contextStr}
+
+            Critical Requirements:
+            1. Academic Precision: Questions must be technically rigorous.
+            2. Logical Consistency (CRITICAL): The 'correctAnswer' index MUST strictly match the correct option described in the 'explanation'.
+            3. Explanation: The 'explanation' must explicitly state why the correct option is correct and why the others are wrong.
+            4. Format: Strict JSON Array: [{ "question": "...", "options": ["..."], "correctAnswer": 0, "explanation": "..." }]
+            5. Language: Natural technical medical English.
+        `;
+    } else {
+        prompt = `
+            Actúa como un profesor experto en Radiología de nivel Fellow/Subespecialista.
+            Genera un quiz de 10 preguntas de selección múltiple sobre: "${diagnosis}".
+            Nivel del alumno: ${contextStr}
+
+            Requisitos Críticos:
+            1. Precisión Académica: Las preguntas deben ser técnicamente rigurosas.
+            2. Consistencia Lógica (CRÍTICO): El índice 'correctAnswer' DEBE coincidir inequívocamente con la opción correcta descrita en 'explanation'.
+            3. Explicación: La 'explanation' debe especificar explícitamente por qué la opción correcta es la correcta y por qué las demás son erróneas.
+            4. Formato: JSON Array estricto: [{ "question": "...", "options": ["..."], "correctAnswer": 0, "explanation": "..." }]
+            5. Lenguaje: Español técnico médico natural (Chile).
+        `;
+    }
 
     try {
         const genAI = new GoogleGenerativeAI(apiKey);

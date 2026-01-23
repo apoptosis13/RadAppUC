@@ -28,7 +28,14 @@ export const ANATOMY_TRANSLATIONS = {
     // General
     'Miembro Superior': 'Upper Limb',
     'Miembro Inferior': 'Lower Limb',
-    'Pared Toracoabdominal': 'Thoracoabdominal Wall'
+    'Pared Toracoabdominal': 'Thoracoabdominal Wall',
+
+    // New Modules
+    'RM de pubis': 'Pubis MRI',
+    'RM de pie': 'Foot MRI',
+    'RM de tobillo': 'Ankle MRI',
+    'RM de muñeca': 'Wrist MRI',
+    'RM de codo': 'Elbow MRI'
 };
 
 /**

@@ -174,6 +174,7 @@ const AnatomyViewerPage = () => {
                             : null
                     }
                     onStartQuiz={!isQuizActive ? () => setIsQuizActive(true) : null}
+                    disableAtlasMode={isQuizActive}
                 />
 
                 {isQuizActive && (

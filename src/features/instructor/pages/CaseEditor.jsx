@@ -1,7 +1,12 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { caseService } from '../../../services/caseService';
-import { Save, X, Upload, Plus, Trash2, Layers, Image as ImageIcon, RotateCw, FlipHorizontal, ArrowUpDown, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Save, X, Upload, Plus, Trash2, Layers, Image as ImageIcon, RotateCw, FlipHorizontal, ArrowUpDown, ChevronLeft, ChevronRight, Languages, Sparkles } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import RichTextEditor from '../../../components/RichTextEditor';
+import FileAttachment from '../../../components/FileAttachment';
+import { storage, functions } from '../../../config/firebase'; // Added functions
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { httpsCallable } from 'firebase/functions'; // For calling the function
 
 const StackEditor = React.memo(({ stack, updateStackLabel, rotateStack, flipStack, invertStackOrder, handleImageUpload, removeStack, removeImage }) => {
     const [currentIndex, setCurrentIndex] = useState(0);
@@ -172,6 +177,8 @@ const CaseEditor = ({ caseId, onCancel, onSuccess }) => {
         correctDiagnosis_en: '',
         diagnosisAliases: [],
         caseComments: '',
+        discussionContent: '',
+        attachments: [],
         questions: [{ text: '', options: ['', '', '', ''], correctAnswer: 0 }],
         questions_en: [{ text: '', options: ['', '', '', ''], correctAnswer: 0 }],
         learningObjectives: ['', '', ''],
@@ -181,6 +188,8 @@ const CaseEditor = ({ caseId, onCancel, onSuccess }) => {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [newAlias, setNewAlias] = useState('');
     const [activeStackId, setActiveStackId] = useState(null); // 'main' or stack ID
+    const [discussionTab, setDiscussionTab] = useState('es'); // 'es' | 'en'
+    const [isTranslating, setIsTranslating] = useState(false);
 
     useEffect(() => {
         if (caseId) {
@@ -206,6 +215,8 @@ const CaseEditor = ({ caseId, onCancel, onSuccess }) => {
                 if (!data.title_en) data.title_en = '';
                 if (!data.history_en) data.history_en = '';
                 if (!data.correctDiagnosis_en) data.correctDiagnosis_en = '';
+                if (!data.discussionContent) data.discussionContent = '';
+                if (!data.attachments) data.attachments = [];
 
 
                 setFormData(data);
@@ -280,6 +291,46 @@ const CaseEditor = ({ caseId, onCancel, onSuccess }) => {
         } finally {
             setIsSubmitting(false);
         }
+    };
+
+    const handleRichTextImageUpload = async (file) => {
+        try {
+            const storageRef = ref(storage, `case-discussion/images/${Date.now()}_${file.name}`);
+            const snapshot = await uploadBytes(storageRef, file);
+            const downloadURL = await getDownloadURL(snapshot.ref);
+            return downloadURL;
+        } catch (error) {
+            console.error("Error uploading inline image:", error);
+            throw error;
+        }
+    };
+
+    const handleAttachmentUpload = async (file) => {
+        try {
+            const storageRef = ref(storage, `case-attachments/${Date.now()}_${file.name}`);
+            const snapshot = await uploadBytes(storageRef, file);
+            const downloadURL = await getDownloadURL(snapshot.ref);
+
+            setFormData(prev => ({
+                ...prev,
+                attachments: [...(prev.attachments || []), {
+                    name: file.name,
+                    url: downloadURL,
+                    type: file.type,
+                    size: file.size
+                }]
+            }));
+        } catch (error) {
+            console.error("Error uploading attachment:", error);
+            throw error;
+        }
+    };
+
+    const handleRemoveAttachment = (index) => {
+        setFormData(prev => ({
+            ...prev,
+            attachments: prev.attachments.filter((_, i) => i !== index)
+        }));
     };
 
     const removeImage = (index, stackId = null) => {
@@ -435,6 +486,39 @@ const CaseEditor = ({ caseId, onCancel, onSuccess }) => {
         }));
     };
 
+    // --- Translation Logic ---
+    const handleTranslateContent = async () => {
+        const sourceText = formData.discussionContent;
+        if (!sourceText || !sourceText.trim()) {
+            alert("No hay contenido para traducir.");
+            return;
+        }
+
+        setIsTranslating(true);
+        try {
+            const translateText = httpsCallable(functions, 'translateText');
+            const result = await translateText({
+                text: sourceText,
+                target: 'en',
+                format: 'html'
+            });
+
+            if (result.data && result.data.translation) {
+                setFormData(prev => ({
+                    ...prev,
+                    discussionContent_en: result.data.translation
+                }));
+                // Switch to English tab to show result
+                setDiscussionTab('en');
+                alert("Traducción completada. Por favor revisa el contenido.");
+            }
+        } catch (error) {
+            console.error("Translation error:", error);
+            alert("Error al traducir: " + error.message);
+        } finally {
+            setIsTranslating(false);
+        }
+    };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -471,236 +555,344 @@ const CaseEditor = ({ caseId, onCancel, onSuccess }) => {
                     >
                         <X size={24} />
                     </button>
-                    <button
-                        onClick={handleSubmit}
-                        disabled={isSubmitting}
-                        className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50"
-                    >
-                        <Save className="mr-2 h-4 w-4" />
-                        Guardar
-                    </button>
                 </div>
             </div>
 
-            <form className="p-6 space-y-8">
+            <div className="flex-1 overflow-y-auto pb-20">
+                <form className="p-6 space-y-8">
 
-                {/* --- BASIC INFO --- */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Título</label>
-                        <input type="text" name="title" value={formData.title} onChange={handleChange} required
-                            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border dark:bg-gray-700 dark:border-gray-600 dark:text-white" />
-                    </div>
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Title (English)</label>
-                        <input type="text" name="title_en" value={formData.title_en} onChange={handleChange}
-                            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border dark:bg-gray-700 dark:border-gray-600 dark:text-white" />
-                    </div>
-
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Diagnóstico Correcto</label>
-                        <input type="text" name="correctDiagnosis" value={formData.correctDiagnosis} onChange={handleChange} required
-                            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border dark:bg-gray-700 dark:border-gray-600 dark:text-white" />
-                    </div>
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Diagnosis (English)</label>
-                        <input type="text" name="correctDiagnosis_en" value={formData.correctDiagnosis_en} onChange={handleChange}
-                            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border dark:bg-gray-700 dark:border-gray-600 dark:text-white" />
-                    </div>
-
-                    <div className="col-span-1 md:col-span-2">
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                            Diagnósticos Alternativos (Sinónimos aceptados)
-                        </label>
-                        <div className="space-y-2 mb-2">
-                            {(formData.diagnosisAliases || []).map((alias, index) => (
-                                <div key={index} className="flex items-center justify-between bg-gray-50 dark:bg-gray-700 p-2 rounded border border-gray-200 dark:border-gray-600">
-                                    <span className="text-sm text-gray-700 dark:text-gray-300">{alias}</span>
-                                    <button
-                                        type="button"
-                                        onClick={() => handleRemoveAlias(index)}
-                                        className="text-red-500 hover:text-red-700 text-sm"
-                                    >
-                                        Eliminar
-                                    </button>
-                                </div>
-                            ))}
+                    {/* --- BASIC INFO --- */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Título</label>
+                            <input type="text" name="title" value={formData.title} onChange={handleChange} required
+                                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border dark:bg-gray-700 dark:border-gray-600 dark:text-white" />
                         </div>
-                        <div className="flex gap-2">
-                            <input
-                                type="text"
-                                value={newAlias}
-                                onChange={(e) => setNewAlias(e.target.value)}
-                                placeholder="Agregar variante aceptada (ej. 'Desgarro menisco')"
-                                className="flex-1 rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-                                onKeyDown={(e) => {
-                                    if (e.key === 'Enter') {
-                                        e.preventDefault();
-                                        handleAddAlias();
-                                    }
-                                }}
-                            />
-                            <button
-                                type="button"
-                                onClick={handleAddAlias}
-                                className="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-                            >
-                                Agregar
-                            </button>
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Title (English)</label>
+                            <input type="text" name="title_en" value={formData.title_en} onChange={handleChange}
+                                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border dark:bg-gray-700 dark:border-gray-600 dark:text-white" />
                         </div>
-                        <p className="mt-1 text-xs text-gray-500">
-                            Agrega variantes en español o inglés que también deban considerarse correctas.
-                        </p>
-                    </div>
 
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Modalidad</label>
-                        <select name="modality" value={formData.modality} onChange={handleChange}
-                            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border dark:bg-gray-700 dark:border-gray-600 dark:text-white">
-                            <option value="X-Ray">X-Ray</option>
-                            <option value="CT">CT</option>
-                            <option value="MRI">MRI</option>
-                            <option value="Ultrasound">Ultrasound</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Dificultad</label>
-                        <select name="difficulty" value={formData.difficulty} onChange={handleChange}
-                            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border dark:bg-gray-700 dark:border-gray-600 dark:text-white">
-                            <option value="Beginner">Beginner</option>
-                            <option value="Intermediate">Intermediate</option>
-                            <option value="Advanced">Advanced</option>
-                        </select>
-                    </div>
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Diagnóstico Correcto</label>
+                            <input type="text" name="correctDiagnosis" value={formData.correctDiagnosis} onChange={handleChange} required
+                                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border dark:bg-gray-700 dark:border-gray-600 dark:text-white" />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Diagnosis (English)</label>
+                            <input type="text" name="correctDiagnosis_en" value={formData.correctDiagnosis_en} onChange={handleChange}
+                                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border dark:bg-gray-700 dark:border-gray-600 dark:text-white" />
+                        </div>
 
-                    <div className="col-span-2">
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Historia Clínica</label>
-                        <textarea name="history" rows={2} value={formData.history} onChange={handleChange} required
-                            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border dark:bg-gray-700 dark:border-gray-600 dark:text-white" />
-                    </div>
-                </div>
-
-                {/* --- IMAGE SERIES MANAGER --- */}
-                <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-5 bg-gray-50 dark:bg-gray-800/50">
-                    <div className="flex justify-between items-center mb-4">
-                        <h3 className="text-lg font-medium text-gray-900 dark:text-white flex items-center">
-                            <Layers className="w-5 h-5 mr-2 text-indigo-500" />
-                            Gestor de Imágenes y Series
-                        </h3>
-                        <div className="flex space-x-2">
-                            <label className="cursor-pointer inline-flex items-center px-3 py-1.5 border border-gray-300 shadow-sm text-xs font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
-                                <ImageIcon className="w-4 h-4 mr-1.5" />
-                                + Imagen
-                                <input type="file" className="hidden" accept="image/*" multiple onChange={(e) => handleImageUpload(e)} disabled={isSubmitting} />
+                        <div className="col-span-1 md:col-span-2">
+                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                Diagnósticos Alternativos (Sinónimos aceptados)
                             </label>
-                            <button type="button" onClick={addStack} className="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700">
-                                <Plus className="w-4 h-4 mr-1.5" />
-                                + Serie
-                            </button>
-                        </div>
-                    </div>
-
-                    {/* Loose Images */}
-                    {formData.images.length > 0 && (
-                        <div className="mb-6">
-                            <h4 className="text-sm font-medium text-gray-500 uppercase tracking-wider mb-2">Imágenes Individuales</h4>
-                            <div className="flex overflow-x-auto gap-4 pb-2">
-                                {formData.images.map((img, idx) => (
-                                    <div key={idx} className="relative flex-shrink-0 w-32 h-32 group">
-                                        <img src={img} className="w-full h-full object-cover rounded-md border border-gray-300" />
-                                        <button type="button" onClick={() => removeImage(idx)} className="absolute top-1 right-1 bg-red-500 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
-                                            <X size={14} />
+                            <div className="space-y-2 mb-2">
+                                {(formData.diagnosisAliases || []).map((alias, index) => (
+                                    <div key={index} className="flex items-center justify-between bg-gray-50 dark:bg-gray-700 p-2 rounded border border-gray-200 dark:border-gray-600">
+                                        <span className="text-sm text-gray-700 dark:text-gray-300">{alias}</span>
+                                        <button
+                                            type="button"
+                                            onClick={() => handleRemoveAlias(index)}
+                                            className="text-red-500 hover:text-red-700 text-sm"
+                                        >
+                                            Eliminar
                                         </button>
                                     </div>
                                 ))}
                             </div>
-                        </div>
-                    )}
-
-                    {/* Stacks */}
-                    <div className="space-y-4">
-                        {formData.imageStacks.map((stack) => (
-                            <StackEditor
-                                key={stack.id}
-                                stack={stack}
-                                updateStackLabel={updateStackLabel}
-                                rotateStack={rotateStack}
-                                flipStack={flipStack}
-                                invertStackOrder={invertStackOrder}
-                                handleImageUpload={handleImageUpload}
-                                removeStack={removeStack}
-                                removeImage={removeImage}
-                            />
-                        ))}
-                    </div>
-                </div>
-
-                {/* --- TOGGLES & COMMENTS --- */}
-                <div className="grid grid-cols-1 gap-6">
-                    <div className="flex items-center justify-between bg-indigo-50 dark:bg-indigo-900/30 p-4 rounded-lg">
-                        <div>
-                            <h4 className="text-sm font-medium text-gray-900 dark:text-white">Quiz IA Exclusivo</h4>
-                            <p className="text-xs text-gray-500 dark:text-gray-400">Oculta las preguntas manuales en el visualizador.</p>
-                        </div>
-                        <label className="relative inline-flex items-center cursor-pointer">
-                            <input type="checkbox" name="hideManualQuestions" checked={formData.hideManualQuestions} onChange={handleChange} className="sr-only peer" />
-                            <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-indigo-300 dark:peer-focus:ring-indigo-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-indigo-600"></div>
-                        </label>
-                    </div>
-
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Comentarios (Post-resolución)</label>
-                        <textarea name="caseComments" rows={2} value={formData.caseComments} onChange={handleChange}
-                            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border dark:bg-gray-700 dark:border-gray-600 dark:text-white" />
-                    </div>
-                </div>
-
-                {/* --- MANUAL QUESTIONS --- */}
-                <div className="border-t pt-6">
-                    <div className="flex justify-between items-center mb-4">
-                        <h3 className="text-lg font-medium text-gray-900 dark:text-white">Preguntas Manuales</h3>
-                        <button type="button" onClick={handleAddQuestion} className="text-indigo-600 hover:text-indigo-500 text-sm font-medium">
-                            + Añadir Pregunta
-                        </button>
-                    </div>
-
-                    <div className="space-y-6">
-                        {formData.questions.map((q, i) => (
-                            <div key={i} className="bg-gray-50 dark:bg-gray-700/50 p-4 rounded-lg border border-gray-200 dark:border-gray-700 relative">
-                                <button type="button" onClick={() => handleRemoveQuestion(i)} className="absolute top-2 right-2 text-gray-400 hover:text-red-500">
-                                    <X size={16} />
+                            <div className="flex gap-2">
+                                <input
+                                    type="text"
+                                    value={newAlias}
+                                    onChange={(e) => setNewAlias(e.target.value)}
+                                    placeholder="Agregar variante aceptada (ej. 'Desgarro menisco')"
+                                    className="flex-1 rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                                    onKeyDown={(e) => {
+                                        if (e.key === 'Enter') {
+                                            e.preventDefault();
+                                            handleAddAlias();
+                                        }
+                                    }}
+                                />
+                                <button
+                                    type="button"
+                                    onClick={handleAddAlias}
+                                    className="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                                >
+                                    Agregar
                                 </button>
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    <div>
-                                        <label className="block text-xs font-semibold uppercase text-gray-500 mb-1">Español</label>
-                                        <input type="text" value={q.text} onChange={(e) => handleQuestionChange(i, 'text', e.target.value)} placeholder="Pregunta..."
-                                            className="block w-full rounded-md border-gray-300 shadow-sm text-sm p-2 border mb-2" />
-                                        {q.options.map((opt, oid) => (
-                                            <div key={oid} className="flex items-center space-x-2 mb-1">
-                                                <input type="radio" checked={parseInt(q.correctAnswer) === oid} onChange={() => handleQuestionChange(i, 'correctAnswer', oid)} />
-                                                <input type="text" value={opt} onChange={(e) => handleOptionChange(i, oid, e.target.value)} placeholder={`Opción ${oid + 1}`}
-                                                    className="block w-full text-xs border-gray-300 rounded p-1" />
-                                            </div>
-                                        ))}
-                                    </div>
-                                    <div>
-                                        <label className="block text-xs font-semibold uppercase text-gray-500 mb-1">English (Translation)</label>
-                                        <input type="text" value={formData.questions_en?.[i]?.text || ''} onChange={(e) => handleQuestionChange(i, 'text', e.target.value, 'en')} placeholder="Question..."
-                                            className="block w-full rounded-md border-gray-300 shadow-sm text-sm p-2 border mb-2" />
-                                        {(formData.questions_en?.[i]?.options || ['', '', '', '']).map((opt, oid) => (
-                                            <div key={oid} className="flex items-center space-x-2 mb-1 pl-5">
-                                                <input type="text" value={opt} onChange={(e) => handleOptionChange(i, oid, e.target.value, 'en')} placeholder={`Option ${oid + 1}`}
-                                                    className="block w-full text-xs border-gray-300 rounded p-1" />
-                                            </div>
-                                        ))}
-                                    </div>
+                            </div>
+                            <p className="mt-1 text-xs text-gray-500">
+                                Agrega variantes en español o inglés que también deban considerarse correctas.
+                            </p>
+                        </div>
+
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Modalidad</label>
+                            <select name="modality" value={formData.modality} onChange={handleChange}
+                                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                                <option value="X-Ray">X-Ray</option>
+                                <option value="CT">CT</option>
+                                <option value="MRI">MRI</option>
+                                <option value="Ultrasound">Ultrasound</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Dificultad</label>
+                            <select name="difficulty" value={formData.difficulty} onChange={handleChange}
+                                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                                <option value="Beginner">Beginner</option>
+                                <option value="Intermediate">Intermediate</option>
+                                <option value="Advanced">Advanced</option>
+                            </select>
+                        </div>
+
+                        <div className="col-span-2">
+                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Historia Clínica</label>
+                            <textarea name="history" rows={2} value={formData.history} onChange={handleChange} required
+                                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border dark:bg-gray-700 dark:border-gray-600 dark:text-white" />
+                        </div>
+                    </div>
+
+                    {/* --- IMAGE SERIES MANAGER --- */}
+                    <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-5 bg-gray-50 dark:bg-gray-800/50">
+                        <div className="flex justify-between items-center mb-4">
+                            <h3 className="text-lg font-medium text-gray-900 dark:text-white flex items-center">
+                                <Layers className="w-5 h-5 mr-2 text-indigo-500" />
+                                Gestor de Imágenes y Series
+                            </h3>
+                            <div className="flex space-x-2">
+                                <label className="cursor-pointer inline-flex items-center px-3 py-1.5 border border-gray-300 shadow-sm text-xs font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
+                                    <ImageIcon className="w-4 h-4 mr-1.5" />
+                                    + Imagen
+                                    <input type="file" className="hidden" accept="image/*" multiple onChange={(e) => handleImageUpload(e)} disabled={isSubmitting} />
+                                </label>
+                                <button type="button" onClick={addStack} className="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700">
+                                    <Plus className="w-4 h-4 mr-1.5" />
+                                    + Serie
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* Loose Images */}
+                        {formData.images.length > 0 && (
+                            <div className="mb-6">
+                                <h4 className="text-sm font-medium text-gray-500 uppercase tracking-wider mb-2">Imágenes Individuales</h4>
+                                <div className="flex overflow-x-auto gap-4 pb-2">
+                                    {formData.images.map((img, idx) => (
+                                        <div key={idx} className="relative flex-shrink-0 w-32 h-32 group">
+                                            <img src={img} className="w-full h-full object-cover rounded-md border border-gray-300" />
+                                            <button type="button" onClick={() => removeImage(idx)} className="absolute top-1 right-1 bg-red-500 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
+                                                <X size={14} />
+                                            </button>
+                                        </div>
+                                    ))}
                                 </div>
                             </div>
-                        ))}
-                    </div>
-                </div>
+                        )}
 
-            </form>
+                        {/* Stacks */}
+                        <div className="space-y-4">
+                            {formData.imageStacks.map((stack) => (
+                                <StackEditor
+                                    key={stack.id}
+                                    stack={stack}
+                                    updateStackLabel={updateStackLabel}
+                                    rotateStack={rotateStack}
+                                    flipStack={flipStack}
+                                    invertStackOrder={invertStackOrder}
+                                    handleImageUpload={handleImageUpload}
+                                    removeStack={removeStack}
+                                    removeImage={removeImage}
+                                />
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* --- TOGGLES & COMMENTS --- */}
+                    <div className="grid grid-cols-1 gap-6">
+                        <div className="flex items-center justify-between bg-indigo-50 dark:bg-indigo-900/30 p-4 rounded-lg">
+                            <div>
+                                <h4 className="text-sm font-medium text-gray-900 dark:text-white">Quiz IA Exclusivo</h4>
+                                <p className="text-xs text-gray-500 dark:text-gray-400">Oculta las preguntas manuales en el visualizador.</p>
+                            </div>
+                            <label className="relative inline-flex items-center cursor-pointer">
+                                <input type="checkbox" name="hideManualQuestions" checked={formData.hideManualQuestions} onChange={handleChange} className="sr-only peer" />
+                                <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-indigo-300 dark:peer-focus:ring-indigo-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-indigo-600"></div>
+                            </label>
+                        </div>
+
+                        <div>
+                            <div>
+                                <div className="flex items-center justify-between mb-2">
+                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                                        Discusión del Caso (Enriquece la explicación)
+                                    </label>
+                                    <div className="flex space-x-2 bg-gray-100 dark:bg-gray-700 rounded-lg p-1">
+                                        <button
+                                            type="button"
+                                            onClick={() => setDiscussionTab('es')}
+                                            className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${discussionTab === 'es'
+                                                ? 'bg-white dark:bg-gray-600 text-indigo-600 dark:text-indigo-300 shadow-sm'
+                                                : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
+                                                }`}
+                                        >
+                                            Español
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => setDiscussionTab('en')}
+                                            className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${discussionTab === 'en'
+                                                ? 'bg-white dark:bg-gray-600 text-indigo-600 dark:text-indigo-300 shadow-sm'
+                                                : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
+                                                }`}
+                                        >
+                                            English
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <div className="relative">
+                                    {discussionTab === 'es' ? (
+                                        <RichTextEditor
+                                            content={formData.discussionContent}
+                                            onChange={(content) => setFormData(prev => ({ ...prev, discussionContent: content }))}
+                                            onImageUpload={handleRichTextImageUpload}
+                                        />
+                                    ) : (
+                                        <div className="relative">
+                                            <RichTextEditor
+                                                content={formData.discussionContent_en || ''}
+                                                onChange={(content) => setFormData(prev => ({ ...prev, discussionContent_en: content }))}
+                                                onImageUpload={handleRichTextImageUpload}
+                                            />
+                                            {/* Translation Helper Button */}
+                                            {(!formData.discussionContent_en || formData.discussionContent_en.trim() === '') && formData.discussionContent && (
+                                                <div className="absolute inset-0 flex items-center justify-center bg-gray-50/80 dark:bg-gray-800/80 z-10 backdrop-blur-sm rounded-md">
+                                                    <button
+                                                        type="button"
+                                                        onClick={handleTranslateContent}
+                                                        disabled={isTranslating}
+                                                        className="flex items-center px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-md shadow-lg transition-transform transform hover:scale-105 disabled:opacity-50 disabled:scale-100"
+                                                    >
+                                                        {isTranslating ? (
+                                                            <>
+                                                                <RotateCw className="w-4 h-4 mr-2 animate-spin" />
+                                                                Traduciendo...
+                                                            </>
+                                                        ) : (
+                                                            <>
+                                                                <Sparkles className="w-4 h-4 mr-2 text-yellow-300" />
+                                                                Traducir Automáticamente con IA
+                                                            </>
+                                                        )}
+                                                    </button>
+                                                </div>
+                                            )}
+                                            {/* Floating Retranslate Button (mini) if content exists */}
+                                            {formData.discussionContent_en && formData.discussionContent_en.trim() !== '' && (
+                                                <button
+                                                    type="button"
+                                                    onClick={handleTranslateContent}
+                                                    disabled={isTranslating}
+                                                    className="absolute top-2 right-2 p-1.5 bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-300 rounded-full hover:bg-indigo-200 dark:hover:bg-indigo-900 border border-indigo-200 dark:border-indigo-700 z-10"
+                                                    title="Regenerar traducción"
+                                                >
+                                                    <Sparkles className="w-3 h-3" />
+                                                </button>
+                                            )}
+                                        </div>
+                                    )}
+                                </div>
+
+                                <p className="mt-1 text-xs text-gray-500">
+                                    {discussionTab === 'es'
+                                        ? "Utiliza este editor para explicar el caso, agregar perlas clínicas, imágenes explicativas y dar formato al texto en Español."
+                                        : "English version of the case discussion. You can translate automatically from Spanish or edit manually."}
+                                </p>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                Material Complementario (Archivos adjuntos)
+                            </label>
+                            <FileAttachment
+                                attachments={formData.attachments}
+                                onAdd={handleAttachmentUpload}
+                                onDelete={handleRemoveAttachment}
+                            />
+                        </div>
+                    </div>
+
+                    {/* --- MANUAL QUESTIONS --- */}
+                    <div className="border-t pt-6">
+                        <div className="flex justify-between items-center mb-4">
+                            <h3 className="text-lg font-medium text-gray-900 dark:text-white">Preguntas Manuales</h3>
+                            <button type="button" onClick={handleAddQuestion} className="text-indigo-600 hover:text-indigo-500 text-sm font-medium">
+                                + Añadir Pregunta
+                            </button>
+                        </div>
+
+                        <div className="space-y-6">
+                            {formData.questions.map((q, i) => (
+                                <div key={i} className="bg-gray-50 dark:bg-gray-700/50 p-4 rounded-lg border border-gray-200 dark:border-gray-700 relative">
+                                    <button type="button" onClick={() => handleRemoveQuestion(i)} className="absolute top-2 right-2 text-gray-400 hover:text-red-500">
+                                        <X size={16} />
+                                    </button>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <div>
+                                            <label className="block text-xs font-semibold uppercase text-gray-500 mb-1">Español</label>
+                                            <input type="text" value={q.text} onChange={(e) => handleQuestionChange(i, 'text', e.target.value)} placeholder="Pregunta..."
+                                                className="block w-full rounded-md border-gray-300 shadow-sm text-sm p-2 border mb-2" />
+                                            {q.options.map((opt, oid) => (
+                                                <div key={oid} className="flex items-center space-x-2 mb-1">
+                                                    <input type="radio" checked={parseInt(q.correctAnswer) === oid} onChange={() => handleQuestionChange(i, 'correctAnswer', oid)} />
+                                                    <input type="text" value={opt} onChange={(e) => handleOptionChange(i, oid, e.target.value)} placeholder={`Opción ${oid + 1}`}
+                                                        className="block w-full text-xs border-gray-300 rounded p-1" />
+                                                </div>
+                                            ))}
+                                        </div>
+                                        <div>
+                                            <label className="block text-xs font-semibold uppercase text-gray-500 mb-1">English (Translation)</label>
+                                            <input type="text" value={formData.questions_en?.[i]?.text || ''} onChange={(e) => handleQuestionChange(i, 'text', e.target.value, 'en')} placeholder="Question..."
+                                                className="block w-full rounded-md border-gray-300 shadow-sm text-sm p-2 border mb-2" />
+                                            {(formData.questions_en?.[i]?.options || ['', '', '', '']).map((opt, oid) => (
+                                                <div key={oid} className="flex items-center space-x-2 mb-1 pl-5">
+                                                    <input type="text" value={opt} onChange={(e) => handleOptionChange(i, oid, e.target.value, 'en')} placeholder={`Option ${oid + 1}`}
+                                                        className="block w-full text-xs border-gray-300 rounded p-1" />
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+
+                </form>
+            </div>
+            {/* Footer with Actions */}
+            <div className="px-6 py-4 bg-gray-50 dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700 flex justify-end items-center space-x-3 sticky bottom-0 z-20">
+                <button
+                    type="button"
+                    onClick={onCancel}
+                    className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                >
+                    Cancelar
+                </button>
+                <button
+                    onClick={handleSubmit}
+                    disabled={isSubmitting}
+                    className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50"
+                >
+                    <Save className="mr-2 h-4 w-4" />
+                    Guardar Cambios
+                </button>
+            </div>
         </div>
     );
 };

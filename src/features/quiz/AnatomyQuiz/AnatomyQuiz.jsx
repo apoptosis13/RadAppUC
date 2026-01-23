@@ -349,7 +349,7 @@ const AnatomyQuiz = ({ module, onClose, onViewerUpdate, userClickTrigger }) => {
                         >
                             <AlertCircle className="w-6 h-6 mr-3" />
                             {t('quiz.modeIdentify', 'Identificar Estructura')}
-                            <span className="ml-2 text-xs font-normal text-indigo-200 bg-indigo-800 px-2 py-1 rounded">¿Qué es esto?</span>
+                            <span className="ml-2 text-xs font-normal text-indigo-200 bg-indigo-800 px-2 py-1 rounded">{t('quiz.anatomy.identifyBadge', '¿Qué es esto?')}</span>
                         </button>
                         <button
                             onClick={() => startGame('locate')}
@@ -357,7 +357,7 @@ const AnatomyQuiz = ({ module, onClose, onViewerUpdate, userClickTrigger }) => {
                         >
                             <Play className="w-6 h-6 mr-3" />
                             {t('quiz.modeLocate', 'Localizar Estructura')}
-                            <span className="ml-2 text-xs font-normal text-emerald-200 bg-emerald-800 px-2 py-1 rounded">¿Dónde está...?</span>
+                            <span className="ml-2 text-xs font-normal text-emerald-200 bg-emerald-800 px-2 py-1 rounded">{t('quiz.anatomy.locateBadge', '¿Dónde está...?')}</span>
                         </button>
                     </div>
 
@@ -377,16 +377,16 @@ const AnatomyQuiz = ({ module, onClose, onViewerUpdate, userClickTrigger }) => {
                     <Trophy className="w-24 h-24 text-yellow-500 mx-auto mb-6 animate-bounce" />
                     <h2 className="text-4xl font-extrabold text-white mb-2">{t('quiz.completed', '¡Quiz Completado!')}</h2>
                     <p className="text-xl text-gray-400 mb-8">
-                        {gameMode === 'identify' ? 'Modo Identificación' : 'Modo Localización'}
+                        {gameMode === 'identify' ? t('quiz.anatomy.modeIdentify', 'Modo Identificación') : t('quiz.anatomy.modeLocate', 'Modo Localización')}
                     </p>
 
                     <div className="grid grid-cols-2 gap-8 mb-10">
                         <div className="bg-gray-800 p-6 rounded-2xl border border-gray-700">
-                            <p className="text-gray-400 uppercase text-xs font-bold tracking-wider mb-2">Puntaje</p>
+                            <p className="text-gray-400 uppercase text-xs font-bold tracking-wider mb-2">{t('quiz.anatomy.score', 'Puntaje')}</p>
                             <p className="text-5xl font-black text-indigo-400">{score}</p>
                         </div>
                         <div className="bg-gray-800 p-6 rounded-2xl border border-gray-700">
-                            <p className="text-gray-400 uppercase text-xs font-bold tracking-wider mb-2">Aciertos</p>
+                            <p className="text-gray-400 uppercase text-xs font-bold tracking-wider mb-2">{t('quiz.anatomy.hits', 'Aciertos')}</p>
                             <p className="text-5xl font-black text-emerald-400">{correctCount}/{QUESTIONS_PER_ROUND}</p>
                         </div>
                     </div>
@@ -402,7 +402,7 @@ const AnatomyQuiz = ({ module, onClose, onViewerUpdate, userClickTrigger }) => {
                             onClick={onClose}
                             className="bg-transparent border border-gray-600 text-white px-8 py-3 rounded-full font-bold hover:bg-gray-800 transition-colors"
                         >
-                            {t('common.exit', 'Salir')}
+                            {t('quiz.anatomy.exit', 'Salir')}
                         </button>
                     </div>
                 </div>
@@ -438,7 +438,7 @@ const AnatomyQuiz = ({ module, onClose, onViewerUpdate, userClickTrigger }) => {
                     </div>
 
                     <div className="bg-gray-900/80 backdrop-blur text-white px-4 py-2 rounded-full font-bold border border-gray-700 shadow-lg">
-                        Score: <span className="text-yellow-400">{score}</span>
+                        {t('quiz.anatomy.score', 'Score')}: <span className="text-yellow-400">{score}</span>
                     </div>
                 </div>
 

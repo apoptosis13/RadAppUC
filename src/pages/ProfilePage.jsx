@@ -473,12 +473,40 @@ const ProfilePage = () => {
 
                 <div className="p-6">
                     {statsTab === 'history' ? (
-                        <div className="space-y-4">
+                        <div className="space-y-6">
+                            {/* Averages Section */}
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div className="bg-indigo-50 dark:bg-indigo-900/20 p-4 rounded-lg border border-indigo-100 dark:border-indigo-800 flex items-center justify-between">
+                                    <div>
+                                        <p className="text-sm font-medium text-indigo-800 dark:text-indigo-300">Promedio Anatomía</p>
+                                        <p className="text-xs text-indigo-600 dark:text-indigo-400 mt-1">Últimos {history.filter(h => h.type === 'anatomy').length} intentos</p>
+                                    </div>
+                                    <div className="text-3xl font-black text-indigo-600 dark:text-indigo-400">
+                                        {history.filter(h => h.type === 'anatomy').length > 0
+                                            ? Math.round(history.filter(h => h.type === 'anatomy').reduce((acc, curr) => acc + (curr.score || 0), 0) / history.filter(h => h.type === 'anatomy').length)
+                                            : 0}
+                                    </div>
+                                </div>
+                                <div className="bg-emerald-50 dark:bg-emerald-900/20 p-4 rounded-lg border border-emerald-100 dark:border-emerald-800 flex items-center justify-between">
+                                    <div>
+                                        <p className="text-sm font-medium text-emerald-800 dark:text-emerald-300">Promedio Casos</p>
+                                        <p className="text-xs text-emerald-600 dark:text-emerald-400 mt-1">Últimos {history.filter(h => h.type === 'case').length} intentos</p>
+                                    </div>
+                                    <div className="text-3xl font-black text-emerald-600 dark:text-emerald-400">
+                                        {history.filter(h => h.type === 'case').length > 0
+                                            ? Math.round(history.filter(h => h.type === 'case').reduce((acc, curr) => acc + (curr.score || 0), 0) / history.filter(h => h.type === 'case').length)
+                                            : 0}
+                                    </div>
+                                </div>
+                            </div>
+
+                            <h3 className="text-lg font-bold text-gray-900 dark:text-white mt-6">Últimos 10 Puntajes</h3>
+
                             {history.length > 0 ? (
-                                history.map((item) => {
+                                history.slice(0, 10).map((item) => {
                                     const date = item.timestamp?.toDate ? item.timestamp.toDate() : new Date();
                                     const dateStr = date.toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' });
-                                    const timeStr = date.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit', hour12: true }); // 11:49am
+                                    const timeStr = date.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit', hour12: true });
 
                                     return (
                                         <div key={item.id} className="bg-gray-50 dark:bg-gray-700/50 p-4 rounded-lg border border-gray-200 dark:border-gray-600 flex flex-col md:flex-row justify-between items-start md:items-center">
