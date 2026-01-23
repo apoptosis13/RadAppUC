@@ -4,13 +4,20 @@ import { Plus, Edit, Trash2, Eye } from 'lucide-react';
 import { anatomyService } from '../../../../services/anatomyService';
 import { useTranslation } from 'react-i18next';
 
+import { useAuth } from '../../../../context/AuthContext';
+
 const ManageAnatomyPage = () => {
+    const { user, loading: authLoading } = useAuth();
     const [modules, setModules] = useState([]);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        loadModules();
-    }, []);
+        if (!authLoading && user) {
+            loadModules();
+        } else if (!authLoading && !user) {
+            setLoading(false); // Should redirect? Handled by ProtectedRoute usually.
+        }
+    }, [authLoading, user]);
 
     const loadModules = async () => {
         try {
@@ -37,7 +44,24 @@ const ManageAnatomyPage = () => {
         }
     };
 
-    if (loading) return <div className="p-8 text-center">Cargando módulos...</div>;
+    if (loading || authLoading) return <div className="p-8 text-center">Cargando módulos... (Auth: {authLoading ? 'Init...' : 'Done'})</div>;
+
+    if (!user) {
+        return (
+            <div className="p-8 text-center text-red-600 bg-red-50 rounded-lg">
+                <p className="font-bold">Error de Sesión</p>
+                <p>No se detecta un usuario activo. Intenta recargar la página.</p>
+                <div className="mt-4 space-x-2">
+                    <button onClick={() => window.location.reload()} className="px-4 py-2 bg-red-600 text-white rounded">
+                        Recargar Página
+                    </button>
+                    <button onClick={loadModules} className="px-4 py-2 bg-indigo-600 text-white rounded">
+                        Forzar Carga
+                    </button>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="space-y-6">

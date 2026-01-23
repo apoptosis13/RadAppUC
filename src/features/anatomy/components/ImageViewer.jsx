@@ -273,7 +273,7 @@ const ImageViewer = ({ images = [], imageStacks = [], alt, overlays = [] }) => {
                                 key={index}
                                 src={imgSrc}
                                 alt={alt}
-                                className="max-w-full max-h-[600px] object-contain select-none"
+                                className="w-full h-full object-contain select-none"
                                 draggable={false}
                                 style={{
                                     display: index === currentIndex ? 'block' : 'none'

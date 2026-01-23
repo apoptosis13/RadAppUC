@@ -20,7 +20,7 @@ export const AuthProvider = ({ children }) => {
                 console.error("Auth timeout: Firebase didn't respond in time.");
                 setLoading(false);
             }
-        }, 5000);
+        }, 15000);
 
         const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
             clearTimeout(safetyTimeout);

@@ -78,6 +78,12 @@ service cloud.firestore {
       // Only Admins can create/update/delete
       allow write: if isAdmin();
     }
+
+    // Anatomy Templates (Collection used by App)
+    match /anatomy_templates/{templateId} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
+    }
     
     // Activity Logs (Audit Trail)
     match /activity_logs/{logId} {

@@ -130,10 +130,13 @@ export const caseService = {
         const caseData = {
             ...newCase,
             id: newId,
-            id: newId,
             images: processedImages,
             imageStacks: processedStacks,
-            image: processedImages.length > 0 ? processedImages[0] : null,
+            image: processedImages.length > 0
+                ? processedImages[0]
+                : (processedStacks.length > 0 && processedStacks[0].images && processedStacks[0].images.length > 0)
+                    ? processedStacks[0].images[0]
+                    : null,
             createdAt: new Date().toISOString()
         };
 
@@ -184,7 +187,11 @@ export const caseService = {
             ...data,
             images: processedImages,
             imageStacks: processedStacks,
-            image: processedImages.length > 0 ? processedImages[0] : null,
+            image: processedImages.length > 0
+                ? processedImages[0]
+                : (processedStacks.length > 0 && processedStacks[0].images && processedStacks[0].images.length > 0)
+                    ? processedStacks[0].images[0]
+                    : null,
             titleKey: deleteField(),
             historyKey: deleteField(),
             correctDiagnosisKey: deleteField(),
@@ -196,7 +203,11 @@ export const caseService = {
             ...updatedCase,
             images: processedImages,
             imageStacks: processedStacks,
-            image: processedImages.length > 0 ? processedImages[0] : null
+            image: processedImages.length > 0
+                ? processedImages[0]
+                : (processedStacks.length > 0 && processedStacks[0].images && processedStacks[0].images.length > 0)
+                    ? processedStacks[0].images[0]
+                    : null
         };
 
         try {

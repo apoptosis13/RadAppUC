@@ -72,7 +72,9 @@ const CaseList = () => {
                         >
                             <div className="h-48 bg-gray-200 dark:bg-gray-700 relative">
                                 <img
-                                    src={caseItem.images && caseItem.images.length > 0 ? caseItem.images[0] : caseItem.image}
+                                    src={caseItem.images && caseItem.images.length > 0
+                                        ? caseItem.images[0]
+                                        : (caseItem.image || (caseItem.imageStacks && caseItem.imageStacks.length > 0 && caseItem.imageStacks[0].images && caseItem.imageStacks[0].images.length > 0 ? caseItem.imageStacks[0].images[0] : null))}
                                     alt={caseItem.title}
                                     className="w-full h-full object-cover transition-opacity duration-300 ease-in-out"
                                     loading="lazy"

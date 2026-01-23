@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { anatomyService } from '../../../../services/anatomyService';
-import { ArrowLeft, Save, Upload, Plus, Trash2, Image as ImageIcon, Layers, AlertTriangle, Wand2, Languages, Loader2 } from 'lucide-react';
+import { ArrowLeft, Save, Upload, Plus, Trash2, Image as ImageIcon, Layers, AlertTriangle, Languages, Loader2 } from 'lucide-react';
 import { activityLogService } from '../../../../services/activityLogService';
 import { translationService } from '../../../../services/translationService';
 import AnatomyEditor from "../../../anatomy/components/AnatomyEditor";
@@ -491,7 +491,6 @@ const EditAnatomyPage = () => {
                         >
                             <option value="upper-limb">Miembro Superior</option>
                             <option value="lower-limb">Miembro Inferior</option>
-                            <option value="thoracoabdominal">Pared Toracoabdominal</option>
 
                         </select>
                     </div>
@@ -724,6 +723,8 @@ const EditAnatomyPage = () => {
                                     </div>
                                 </div>
                             )}
+
+
 
                             <div className="flex items-center space-x-4">
                                 <button

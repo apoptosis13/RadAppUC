@@ -1,12 +1,13 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { caseService } from '../../../services/caseService';
-import { Save, X, Upload, Plus, Trash2, Layers, Image as ImageIcon, RotateCw, FlipHorizontal, ArrowUpDown, ChevronLeft, ChevronRight, Languages, Sparkles } from 'lucide-react';
+import { translationService } from '../../../services/translationService'; // Added import for translation service
+import { Save, X, Upload, Plus, Trash2, Layers, Image as ImageIcon, RotateCw, FlipHorizontal, ArrowUpDown, ChevronLeft, ChevronRight, Languages, Sparkles, Loader2 } from 'lucide-react'; // Added Loader2
 import { useTranslation } from 'react-i18next';
 import RichTextEditor from '../../../components/RichTextEditor';
 import FileAttachment from '../../../components/FileAttachment';
-import { storage, functions } from '../../../config/firebase'; // Added functions
+import { storage, functions } from '../../../config/firebase';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { httpsCallable } from 'firebase/functions'; // For calling the function
+import { httpsCallable } from 'firebase/functions';
 
 const StackEditor = React.memo(({ stack, updateStackLabel, rotateStack, flipStack, invertStackOrder, handleImageUpload, removeStack, removeImage }) => {
     const [currentIndex, setCurrentIndex] = useState(0);
@@ -190,6 +191,7 @@ const CaseEditor = ({ caseId, onCancel, onSuccess }) => {
     const [activeStackId, setActiveStackId] = useState(null); // 'main' or stack ID
     const [discussionTab, setDiscussionTab] = useState('es'); // 'es' | 'en'
     const [isTranslating, setIsTranslating] = useState(false);
+    const [translatingFields, setTranslatingFields] = useState({}); // Tracking which field is translating
 
     useEffect(() => {
         if (caseId) {
@@ -198,6 +200,25 @@ const CaseEditor = ({ caseId, onCancel, onSuccess }) => {
             setLoading(false);
         }
     }, [caseId]);
+
+    const handleAutoTranslate = async (sourceField, targetField) => {
+        const sourceText = formData[sourceField];
+        if (!sourceText || !sourceText.trim()) {
+            alert("No hay texto en español para traducir.");
+            return;
+        }
+
+        setTranslatingFields(prev => ({ ...prev, [targetField]: true }));
+        try {
+            const translation = await translationService.translate(sourceText);
+            setFormData(prev => ({ ...prev, [targetField]: translation }));
+        } catch (err) {
+            console.error("Translation fail:", err);
+            alert("Error al traducir: " + err.message);
+        } finally {
+            setTranslatingFields(prev => ({ ...prev, [targetField]: false }));
+        }
+    };
 
     const loadCase = async () => {
         try {
@@ -564,23 +585,59 @@ const CaseEditor = ({ caseId, onCancel, onSuccess }) => {
                     {/* --- BASIC INFO --- */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Título</label>
+                            <label className="flex items-center justify-between text-sm font-medium text-gray-700 dark:text-gray-300">
+                                <span>Título</span>
+                            </label>
                             <input type="text" name="title" value={formData.title} onChange={handleChange} required
                                 className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border dark:bg-gray-700 dark:border-gray-600 dark:text-white" />
                         </div>
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Title (English)</label>
+                            <label className="flex items-center justify-between text-sm font-medium text-gray-700 dark:text-gray-300">
+                                <span>Title (English)</span>
+                                <button
+                                    type="button"
+                                    onClick={() => handleAutoTranslate('title', 'title_en')}
+                                    disabled={translatingFields.title_en || !formData.title}
+                                    className="inline-flex items-center text-[10px] text-indigo-600 hover:text-indigo-500 font-bold uppercase tracking-wider"
+                                    title="Traducir automáticamente desde el español"
+                                >
+                                    {translatingFields.title_en ? (
+                                        <Loader2 className="w-3 h-3 mr-1 animate-spin" />
+                                    ) : (
+                                        <Languages className="w-3 h-3 mr-1" />
+                                    )}
+                                    Auto-traducir
+                                </button>
+                            </label>
                             <input type="text" name="title_en" value={formData.title_en} onChange={handleChange}
                                 className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border dark:bg-gray-700 dark:border-gray-600 dark:text-white" />
                         </div>
 
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Diagnóstico Correcto</label>
+                            <label className="flex items-center justify-between text-sm font-medium text-gray-700 dark:text-gray-300">
+                                <span>Diagnóstico Correcto</span>
+                            </label>
                             <input type="text" name="correctDiagnosis" value={formData.correctDiagnosis} onChange={handleChange} required
                                 className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border dark:bg-gray-700 dark:border-gray-600 dark:text-white" />
                         </div>
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Diagnosis (English)</label>
+                            <label className="flex items-center justify-between text-sm font-medium text-gray-700 dark:text-gray-300">
+                                <span>Diagnosis (English)</span>
+                                <button
+                                    type="button"
+                                    onClick={() => handleAutoTranslate('correctDiagnosis', 'correctDiagnosis_en')}
+                                    disabled={translatingFields.correctDiagnosis_en || !formData.correctDiagnosis}
+                                    className="inline-flex items-center text-[10px] text-indigo-600 hover:text-indigo-500 font-bold uppercase tracking-wider"
+                                    title="Traducir automáticamente desde el español"
+                                >
+                                    {translatingFields.correctDiagnosis_en ? (
+                                        <Loader2 className="w-3 h-3 mr-1 animate-spin" />
+                                    ) : (
+                                        <Languages className="w-3 h-3 mr-1" />
+                                    )}
+                                    Auto-traducir
+                                </button>
+                            </label>
                             <input type="text" name="correctDiagnosis_en" value={formData.correctDiagnosis_en} onChange={handleChange}
                                 className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border dark:bg-gray-700 dark:border-gray-600 dark:text-white" />
                         </div>
@@ -651,8 +708,29 @@ const CaseEditor = ({ caseId, onCancel, onSuccess }) => {
                         </div>
 
                         <div className="col-span-2">
-                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Historia Clínica</label>
+                            <label className="flex items-center justify-between text-sm font-medium text-gray-700 dark:text-gray-300">
+                                <span>Historia Clínica</span>
+                                <button
+                                    type="button"
+                                    onClick={() => handleAutoTranslate('history', 'history_en')}
+                                    disabled={translatingFields.history_en || !formData.history}
+                                    className="inline-flex items-center text-[10px] text-indigo-600 hover:text-indigo-500 font-bold uppercase tracking-wider"
+                                    title="Traducir automáticamente desde el español"
+                                >
+                                    {translatingFields.history_en ? (
+                                        <Loader2 className="w-3 h-3 mr-1 animate-spin" />
+                                    ) : (
+                                        <Languages className="w-3 h-3 mr-1" />
+                                    )}
+                                    Auto-traducir
+                                </button>
+                            </label>
                             <textarea name="history" rows={2} value={formData.history} onChange={handleChange} required
+                                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border dark:bg-gray-700 dark:border-gray-600 dark:text-white" />
+                        </div>
+                        <div className="col-span-2">
+                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">History (English)</label>
+                            <textarea name="history_en" rows={2} value={formData.history_en} onChange={handleChange}
                                 className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border dark:bg-gray-700 dark:border-gray-600 dark:text-white" />
                         </div>
                     </div>

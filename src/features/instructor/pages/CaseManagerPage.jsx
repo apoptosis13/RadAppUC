@@ -114,8 +114,8 @@ const CaseManagerPage = () => {
                             key={cat}
                             onClick={() => setCategory(cat)}
                             className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${category === cat
-                                    ? 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900 dark:text-indigo-200'
-                                    : 'text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-700'
+                                ? 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900 dark:text-indigo-200'
+                                : 'text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-700'
                                 }`}
                         >
                             {cat === 'All' ? 'Todos' : cat}
@@ -137,7 +137,7 @@ const CaseManagerPage = () => {
                                             <div className="flex-shrink-0 h-12 w-12 relative">
                                                 <img
                                                     className="h-12 w-12 rounded-lg object-cover border border-gray-200 dark:border-gray-600"
-                                                    src={caseItem.image || (caseItem.images && caseItem.images[0]) || (caseItem.imageStacks && caseItem.imageStacks[0]?.images[0])}
+                                                    src={caseItem.image || (caseItem.images && caseItem.images[0]) || (caseItem.imageStacks && caseItem.imageStacks.length > 0 && caseItem.imageStacks[0].images && caseItem.imageStacks[0].images.length > 0 ? caseItem.imageStacks[0].images[0] : null)}
                                                     alt=""
                                                 />
                                                 <div className="absolute -bottom-1 -right-1 bg-white dark:bg-gray-800 rounded-full p-0.5 shadow-sm">
@@ -150,8 +150,8 @@ const CaseManagerPage = () => {
                                                         {caseItem.title || t(caseItem.titleKey)}
                                                     </p>
                                                     <span className={`ml-2 px-2 inline-flex text-[10px] leading-4 font-semibold rounded-full ${caseItem.difficulty === 'Beginner' ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' :
-                                                            caseItem.difficulty === 'Intermediate' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400' :
-                                                                'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400'
+                                                        caseItem.difficulty === 'Intermediate' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400' :
+                                                            'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400'
                                                         }`}>
                                                         {caseItem.difficulty}
                                                     </span>

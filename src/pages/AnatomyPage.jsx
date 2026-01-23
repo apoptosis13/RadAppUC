@@ -5,16 +5,19 @@ import { Image as ImageIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { getLocalizedModuleField } from '../utils/anatomyTranslations';
 
-const REGION_IDS = ['upper-limb', 'lower-limb', 'thoracoabdominal'];
+const REGION_IDS = ['upper-limb', 'lower-limb'];
+
+import { useAuth } from '../context/AuthContext';
 
 const AnatomyPage = () => {
     const { t, i18n } = useTranslation();
+    const { user, loading: authLoading } = useAuth();
     const [firestoreModules, setFirestoreModules] = useState([]);
     const [loading, setLoading] = useState(true);
 
     const loadModules = async () => {
         try {
-            const modules = await anatomyService.getModules(REGION_IDS);
+            const modules = await anatomyService.getModules(); // Fetch all, filtered client-side
             setFirestoreModules(modules);
         } catch (error) {
             console.error("Error loading modules:", error);
@@ -24,8 +27,14 @@ const AnatomyPage = () => {
     };
 
     useEffect(() => {
-        loadModules();
-    }, []);
+        if (!authLoading) {
+            if (user) {
+                loadModules();
+            } else {
+                setLoading(false); // No user, stop loading (will show empty or login prompt ideally)
+            }
+        }
+    }, [authLoading, user]);
 
     const regions = REGION_IDS.map(regionId => {
         // Filter modules by region AND exclude non-MSK modules (Chest, Brain)

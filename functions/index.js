@@ -560,6 +560,176 @@ exports.generateQuizAI_v2 = functions.https.onCall(async (data, context) => {
     }
 });
 
+// --- AI ANATOMY ANNOTATION ---
+exports.detectAnatomyAI = functions.https.onCall(async (data, context) => {
+    if (!context.auth) throw new functions.https.HttpsError('unauthenticated', 'Only authenticated users.');
+
+    const { imageUrl, region, plane, modality, hints, sequence, title, contextImages, referenceImageUrl, referenceImageBase64 } = data;
+    if (!imageUrl) throw new functions.https.HttpsError('invalid-argument', 'Missing imageUrl.');
+
+    const apiKey = functions.config().gemini?.key;
+    if (!apiKey) throw new functions.https.HttpsError('failed-precondition', 'AI Not Configured');
+
+    try {
+        // 1. Fetch MAIN Image
+        const response = await fetch(imageUrl);
+        if (!response.ok) throw new Error("Failed to fetch image from Storage");
+        const arrayBuffer = await response.arrayBuffer();
+        const mainBuffer = Buffer.from(arrayBuffer);
+        const mainBase64 = mainBuffer.toString('base64');
+
+        // 2. Prepare REFERENCE Image (Base64 OR URL)
+        let referencePart = null;
+
+        if (referenceImageBase64) {
+            // Direct Base64 provided (from local upload)
+            // Strip data:image/xyz;base64, prefix if present
+            const cleanBase64 = referenceImageBase64.includes(",") ? referenceImageBase64.split(",")[1] : referenceImageBase64;
+            referencePart = {
+                inlineData: { data: cleanBase64, mimeType: "image/jpeg" }
+            };
+        } else if (referenceImageUrl) {
+            // URL provided
+            try {
+                const refRes = await fetch(referenceImageUrl);
+                if (refRes.ok) {
+                    const contentType = refRes.headers.get("content-type");
+                    if (!contentType || !contentType.startsWith("image/")) {
+                        throw new Error("Invalid Content-Type for Reference URL: " + contentType + ". Did you provide a website link instead of an image link?");
+                    }
+
+                    const refAb = await refRes.arrayBuffer();
+                    const refB64 = Buffer.from(refAb).toString('base64');
+                    referencePart = {
+                        inlineData: { data: refB64, mimeType: contentType || "image/jpeg" }
+                    };
+                }
+            } catch (e) {
+                console.warn("Failed to fetch reference image", e);
+                throw new functions.https.HttpsError("invalid-argument", "Error descargando Imagen de Referencia: " + e.message);
+            }
+        }
+
+        // 3. Fetch CONTEXT Images (if any)
+        const contextParts = [];
+        if (contextImages && Array.isArray(contextImages) && contextImages.length > 0) {
+            const fetchPromises = contextImages.map(async (url) => {
+                try {
+                    const res = await fetch(url);
+                    if (res.ok) {
+                        const ab = await res.arrayBuffer();
+                        const b64 = Buffer.from(ab).toString('base64');
+                        return { inlineData: { data: b64, mimeType: "image/jpeg" } };
+                    }
+                } catch (e) {
+                    console.warn("Failed to fetch context image", url, e);
+                    return null;
+                }
+            });
+
+            const results = await Promise.all(fetchPromises);
+            results.forEach(part => {
+                if (part) contextParts.push(part);
+            });
+        }
+
+        // 4. Prepare AI
+        const genAI = new GoogleGenerativeAI(apiKey);
+        const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
+
+        const systemInstruction = `
+            Role: Expert MSD (Musculoskeletal) Radiologist with Calibrated Vision.
+            Task: Identify the MOST IMPORTANT and CLEARLY VISIBLE anatomical structures within the visible tissue.
+
+            Instructions:
+            1. **Reference Image**: Use it ONLY for accurate naming of structures. Ignore its position/zoom.
+            2. **STEP 1: FIND THE TISSUE (BOUNDING BOX)**:
+               - Scan the Target Image.
+               - Ignore the black background. Find the rectangular area containing the visible anatomy.
+               - Output \`tissue_bounding_box\` (absolute 0-1000 coordinates).
+            3. **STEP 2: LOCATE STRUCTURES (RELATIVE)**:
+               - Identify the top 8-10 structures inside that anatomical blob.
+               - **CRITICAL**: The \`x\` and \`y\` for these structures must be **RELATIVE TO THE BOUNDING BOX** (0.0 to 1.0).
+               - \`x=0.0\` is the left edge of the TISSUE, not the image.
+               - \`x=1.0\` is the right edge of the TISSUE.
+               - \`y=0.0\` is the top edge of the TISSUE.
+               - \`y=1.0\` is the bottom edge of the TISSUE.
+            
+            Output format: JSON { 
+                "tissue_bounding_box": { "y_min": 0, "y_max": 1000, "x_min": 0, "x_max": 1000 },
+                "structures": [ { "label": "...", "x": 0.5, "y": 0.5, "category": "..." } ] 
+            }
+            categories: [bones, joints, muscles, ligaments, tendons, menisci, arteries, veins, nerves, other]
+        `;
+
+        const mainImagePart = {
+            inlineData: {
+                data: mainBase64,
+                mimeType: "image/jpeg"
+            },
+        };
+
+        const contentParts = [];
+
+        // System / Intro
+        contentParts.push(systemInstruction);
+
+        // Reference
+        if (referencePart) {
+            contentParts.push("REFERENCE IMAGE (ATLAS) - Use this for anatomical guidance:");
+            contentParts.push(referencePart);
+        }
+
+        // Context
+        if (contextParts.length > 0) {
+            contentParts.push("CONTEXT IMAGES (Previous slices in stack):");
+            contentParts.push(...contextParts);
+        }
+
+        // Target
+        contentParts.push("TARGET IMAGE (Annotate THIS image):");
+        contentParts.push(mainImagePart);
+
+        const result = await model.generateContent(contentParts, { generationConfig: { responseMimeType: "application/json" } });
+        const text = result.response.text().replace(/```json/g, '').replace(/```/g, '').trim();
+
+        const content = JSON.parse(text);
+        const bbox = content.tissue_bounding_box;
+
+        // Projection: Convert Relative (Box Space) -> Absolute (Image Space)
+        if (content.structures && bbox) {
+            const boxW = bbox.x_max - bbox.x_min;
+            const boxH = bbox.y_max - bbox.y_min;
+
+            content.structures = content.structures.map(s => {
+                // Calculate absolute 0-1000
+                const absX = bbox.x_min + (s.x * boxW);
+                const absY = bbox.y_min + (s.y * boxH);
+
+                // Normalize to 0-1 for Client
+                return {
+                    ...s,
+                    x: Math.min(Math.max(absX / 1000, 0), 1),
+                    y: Math.min(Math.max(absY / 1000, 0), 1)
+                };
+            });
+        } else if (content.structures) {
+            // Fallback (should not happen if AI follows instructions)
+            content.structures = content.structures.map(s => ({
+                ...s,
+                x: Math.min(Math.max(s.x / 1000, 0), 1),
+                y: Math.min(Math.max(s.y / 1000, 0), 1)
+            }));
+        }
+
+        return content;
+
+    } catch (error) {
+        console.error("Detect Anatomy Error:", error);
+        throw new functions.https.HttpsError('internal', error.message);
+    }
+});
+
 exports.revokeUserSessions = functions.https.onCall(async (data, context) => {
     if (!context.auth) {
         throw new functions.https.HttpsError('unauthenticated', 'Debe estar autenticado.');

@@ -1,116 +1,104 @@
-import { db, storage } from '../config/firebase';
-import {
-    collection,
-    doc,
-    getDocs,
-    getDoc,
-    addDoc,
-    updateDoc,
-    deleteDoc,
-    query,
-    where
-} from 'firebase/firestore';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { db, storage, functions } from '../config/firebase';
+import { collection, addDoc, updateDoc, deleteDoc, doc, getDocs, getDoc, query, where, orderBy } from 'firebase/firestore';
+import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
+import { httpsCallable } from 'firebase/functions';
 
-const COLLECTION_NAME = 'anatomy_modules';
+const ANATOMY_COLLECTION = 'anatomy_modules';
 
 export const anatomyService = {
-    // Get all modules, optionally filtered by region
-    getModules: async (region = null) => {
+    // --- MODULES (Mapped to anatomy_templates collection) ---
+    getModules: async (region, modality) => {
         try {
-            let q = collection(db, COLLECTION_NAME);
-            if (Array.isArray(region)) {
-                // Support multiple regions
-                q = query(q, where('region', 'in', region));
-            } else if (region) {
-                // Support single region (legacy/backward compatibility)
-                q = query(q, where('region', '==', region));
-            }
-            const snapshot = await getDocs(q);
-            return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        } catch (error) {
-            console.error("Error getting anatomy modules:", error);
-            // Return empty array instead of throwing to prevent breaking Promise.all in dashboard
-            return [];
-        }
-    },
+            let q = query(collection(db, ANATOMY_COLLECTION));
+            if (region) q = query(q, where('region', '==', region));
+            if (modality) q = query(q, where('modality', '==', modality));
 
-    // Get a single module by ID
-    getModuleById: async (id) => {
-        try {
-            const docRef = doc(db, COLLECTION_NAME, id);
-            const docSnap = await getDoc(docRef);
-            if (docSnap.exists()) {
-                return { id: docSnap.id, ...docSnap.data() };
-            } else {
-                return null;
-            }
+            const snapshot = await getDocs(q);
+            const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+            // Sort client-side to avoid composite index requirement
+            return data.sort((a, b) => {
+                const dateA = a.createdAt?.toDate ? a.createdAt.toDate() : new Date(a.createdAt || 0);
+                const dateB = b.createdAt?.toDate ? b.createdAt.toDate() : new Date(b.createdAt || 0);
+                return dateB - dateA; // Descending
+            });
         } catch (error) {
-            console.error("Error getting anatomy module:", error);
+            console.error("Error fetching modules:", error);
             throw error;
         }
     },
 
-    // Create a new module
+    getModuleById: async (id) => {
+        try {
+            const docRef = doc(db, ANATOMY_COLLECTION, id);
+            const docSnap = await getDoc(docRef);
+            if (docSnap.exists()) {
+                return { id: docSnap.id, ...docSnap.data() };
+            } else {
+                throw new Error("Module not found");
+            }
+        } catch (error) {
+            console.error("Error fetching module:", error);
+            throw error;
+        }
+    },
+
     createModule: async (moduleData) => {
         try {
-            const docRef = await addDoc(collection(db, COLLECTION_NAME), {
+            const docRef = await addDoc(collection(db, ANATOMY_COLLECTION), {
                 ...moduleData,
                 createdAt: new Date(),
                 updatedAt: new Date()
             });
             return docRef.id;
         } catch (error) {
-            console.error("Error creating anatomy module:", error);
+            console.error("Error creating module:", error);
             throw error;
         }
     },
 
-    // Update an existing module
     updateModule: async (id, moduleData) => {
         try {
-            const docRef = doc(db, COLLECTION_NAME, id);
+            const docRef = doc(db, ANATOMY_COLLECTION, id);
             await updateDoc(docRef, {
                 ...moduleData,
                 updatedAt: new Date()
             });
         } catch (error) {
-            console.error("Error updating anatomy module:", error);
+            console.error("Error updating module:", error);
             throw error;
         }
     },
 
-    // Delete a module
     deleteModule: async (id) => {
         try {
-            await deleteDoc(doc(db, COLLECTION_NAME, id));
+            await deleteDoc(doc(db, ANATOMY_COLLECTION, id));
         } catch (error) {
-            console.error("Error deleting anatomy module:", error);
+            console.error("Error deleting module:", error);
             throw error;
         }
     },
 
-    // Upload an image file to Firebase Storage
-    uploadImage: async (file) => {
+    // --- ALIASES FOR BACKWARD COMPATIBILITY (Optional but safe) ---
+    getTemplates: async (region, modality) => {
+        return anatomyService.getModules(region, modality);
+    },
+    getTemplateById: async (id) => {
+        return anatomyService.getModuleById(id);
+    },
+
+    // --- IMAGES ---
+    uploadImage: async (file, path = 'anatomy_images') => {
         try {
-            const storageRef = ref(storage, `anatomy/${Date.now()}_${file.name}`);
-
-            // Create a timeout promise
-            const timeoutPromise = new Promise((_, reject) => {
-                setTimeout(() => reject(new Error('La subida de la imagen ha excedido el tiempo de espera (120s).')), 120000);
-            });
-
-            // Race the upload against the timeout
-            const snapshot = await Promise.race([
-                uploadBytes(storageRef, file),
-                timeoutPromise
-            ]);
-
+            const storageRef = ref(storage, `${path}/${Date.now()}_${file.name}`);
+            const snapshot = await uploadBytes(storageRef, file);
             const downloadURL = await getDownloadURL(snapshot.ref);
             return downloadURL;
         } catch (error) {
             console.error("Error uploading image:", error);
             throw error;
         }
-    }
+    },
+
+
 };
