@@ -1,5 +1,6 @@
-import { db, storage } from '../config/firebase';
+import { db, storage, functions } from '../config/firebase';
 import { collection, getDocs, doc, getDoc, addDoc, updateDoc, deleteDoc, deleteField, setDoc } from 'firebase/firestore';
+import { httpsCallable } from 'firebase/functions';
 import { ref, uploadString, getDownloadURL, uploadBytes } from 'firebase/storage';
 import { cases as initialCases } from '../features/cases/data/cases';
 
@@ -259,6 +260,18 @@ export const caseService = {
         } catch (e) {
             console.error("Reset failed", e);
             return initialCases;
+        }
+    },
+
+    // AI Polishing for Dictation
+    polishReport: async (transcript, language = 'es') => {
+        try {
+            const polishRadiologyReport = httpsCallable(functions, 'polishRadiologyReport');
+            const result = await polishRadiologyReport({ transcript, language });
+            return result.data.report;
+        } catch (error) {
+            console.error("Error polishing report:", error);
+            throw error;
         }
     }
 };

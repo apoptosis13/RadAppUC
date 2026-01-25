@@ -95,7 +95,7 @@ const DiagnosisForm = ({ correctDiagnosis, caseData, onComplete }) => {
 
                     {/* References Section */}
                     <div className="bg-gray-900/50 p-4 rounded-lg border border-gray-700">
-                        <h4 className="text-xs font-bold text-gray-500 uppercase mb-3">Referencias</h4>
+                        <h4 className="text-xs font-bold text-gray-500 uppercase mb-3">{t('cases.diagnosis.references', 'Referencias')}</h4>
                         <div className="flex flex-wrap gap-2">
                             <a
                                 href={`https://radiopaedia.org/search?q=${encodeURIComponent(referenceQuery)}`}

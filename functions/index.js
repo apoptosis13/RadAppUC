@@ -730,6 +730,104 @@ exports.detectAnatomyAI = functions.https.onCall(async (data, context) => {
     }
 });
 
+/**
+ * Refines a messy speech-to-text transcript into a professional radiology report using Gemini.
+ */
+exports.polishRadiologyReport = functions.https.onCall(async (data, context) => {
+    if (!context.auth) {
+        throw new functions.https.HttpsError('unauthenticated', 'The function must be called while authenticated.');
+    }
+
+    const { transcript, audioBase64, language = 'es', vocabulary = [], voiceTraining = [] } = data;
+
+    // We require EITHER transcript OR audio
+    if (!transcript && !audioBase64) {
+        throw new functions.https.HttpsError('invalid-argument', 'Transcript or Audio is required.');
+    }
+
+    const apiKey = functions.config().gemini?.key;
+    if (!apiKey) throw new functions.https.HttpsError('failed-precondition', 'AI Not Configured');
+
+    try {
+        const genAI = new GoogleGenerativeAI(apiKey);
+        const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
+
+        // System Instructions (Guidance)
+        const systemPrompt = `
+            ROL: Eres un Editor Médico experto en corrección de dictados radiológicos.
+            Tu misión es convertir el input (Audio y/o Texto) en un informe radiológico profesional y estructurado.
+
+            FUENTES DE INFORMACIÓN:
+            1. **AUDIO (Prioridad Máxima)**: Si se proporciona, es la fuente de verdad absoluta. Escucha atentamente la pronunciación médica.
+            2. **TRANSCRIPCIÓN (Referencia)**: Úsala solo como apoyo si el audio es confuso.
+
+            PERSONALIZACIÓN DEL USUARIO:
+            - **Vocabulario Técnico**: ${JSON.stringify(vocabulary)}
+            - **Correcciones de Voz**: ${voiceTraining.length > 0
+                ? voiceTraining.map(ex => `(Si escuchas "${ex.misunderstood}" -> Escribe "${ex.correct}")`).join(', ')
+                : 'Ninguna específica.'}
+
+            FORMATO DE SALIDA (JSON ESTRICTO):
+            {
+               "exam": "Título del examen (o 'General' si no se menciona)",
+               "findings": "Texto detallado y profesional. Separa hallazgos distintos en párrafos.",
+               "impression": "Conclusión concisa."
+            }
+
+            REGLAS DE ESTILO:
+            - Usa lenguaje médico formal en ${language === 'en' ? 'Inglés' : 'Español'}.
+            - NO uses Markdown ni asteriscos en el contenido JSON.
+            - Corrige gramática, puntuación y unidades de medida.
+            - Si el usuario dice instrucciones como "punto y aparte", "nueva línea", ejecútalas (crea párrafos), no las escribas literalmente.
+        `;
+
+        const parts = [];
+
+        // Add System Prompt as text part (Gemini 2.0 accepts mixed content)
+        parts.push({ text: systemPrompt });
+
+        // Add Transcript if available
+        if (transcript) {
+            parts.push({ text: `TRANSCRIPCIÓN BORRADOR (Web Speech API): "${transcript}"` });
+        }
+
+        // Add Audio if available
+        if (audioBase64) {
+            // Strip header if present (data:audio/webm;base64,...)
+            const cleanBase64 = audioBase64.includes('base64,') ? audioBase64.split('base64,')[1] : audioBase64;
+
+            parts.push({
+                inlineData: {
+                    data: cleanBase64,
+                    mimeType: "audio/webm" // We enforce webm/opus in frontend
+                }
+            });
+            parts.push({ text: "INSTRUCCIÓN EXTRA: Ignora los errores de la transcripción y guíate por este AUDIO." });
+        }
+
+        const result = await model.generateContent(parts, { generationConfig: { responseMimeType: "application/json" } });
+        const responseText = result.response.text();
+
+        let cleanedText = responseText.trim();
+        cleanedText = cleanedText.replace(/^```json\s*/, '').replace(/```$/, '').trim();
+
+        try {
+            return JSON.parse(cleanedText);
+        } catch (parseError) {
+            console.error("JSON Parse Error. Raw response:", responseText);
+            return {
+                exam: '',
+                findings: responseText, // Return raw text if JSON fails
+                impression: '',
+                isRaw: true
+            };
+        }
+    } catch (error) {
+        console.error("Polishing Error:", error);
+        throw new functions.https.HttpsError('internal', `Error en la IA: ${error.message}`);
+    }
+});
+
 exports.revokeUserSessions = functions.https.onCall(async (data, context) => {
     if (!context.auth) {
         throw new functions.https.HttpsError('unauthenticated', 'Debe estar autenticado.');

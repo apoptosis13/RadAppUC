@@ -22,9 +22,11 @@ const CreateCasePage = () => {
         ],
         hideManualQuestions: false,
         diagnosisAliases: [],
-        learningObjectives: ['', '', '']
+        learningObjectives: ['', '', ''],
+        checklist: []
     });
     const [newAlias, setNewAlias] = useState('');
+    const [newChecklistItem, setNewChecklistItem] = useState('');
     const [isCompressing, setIsCompressing] = useState(false);
 
     const handleChange = (e) => {
@@ -143,6 +145,23 @@ const CreateCasePage = () => {
         setFormData(prev => ({
             ...prev,
             diagnosisAliases: prev.diagnosisAliases.filter((_, i) => i !== index)
+        }));
+    };
+
+    // Checklist Handlers
+    const handleAddChecklistItem = () => {
+        if (!newChecklistItem.trim()) return;
+        setFormData(prev => ({
+            ...prev,
+            checklist: [...(prev.checklist || []), newChecklistItem.trim()]
+        }));
+        setNewChecklistItem('');
+    };
+
+    const handleRemoveChecklistItem = (index) => {
+        setFormData(prev => ({
+            ...prev,
+            checklist: prev.checklist.filter((_, i) => i !== index)
         }));
     };
 
@@ -363,6 +382,55 @@ const CreateCasePage = () => {
                         <p className="mt-1 text-xs text-gray-500">
                             Agrega variantes en español o inglés que también deban considerarse correctas.
                         </p>
+                    </div>
+
+                    {/* --- CHECKLIST (Pauta de Cotejo) --- */}
+                    <div className="col-span-2 bg-indigo-50/50 dark:bg-indigo-900/10 p-5 rounded-xl border border-indigo-100 dark:border-indigo-900/30">
+                        <label className="block text-sm font-bold text-indigo-900 dark:text-indigo-200 mb-2">
+                            Pauta de Cotejo (Elementos requeridos en el informe)
+                        </label>
+                        <p className="text-xs text-indigo-700/70 dark:text-indigo-300/50 mb-4">
+                            Define frases o hallazgos clave que el alumno debe mencionar obligatoriamente en su informe.
+                        </p>
+
+                        <div className="space-y-2 mb-4">
+                            {(formData.checklist || []).map((item, index) => (
+                                <div key={index} className="flex items-center justify-between bg-white dark:bg-gray-800 p-3 rounded-lg border border-indigo-100 dark:border-indigo-900/50 shadow-sm">
+                                    <span className="text-sm text-gray-700 dark:text-gray-200">{item}</span>
+                                    <button
+                                        type="button"
+                                        onClick={() => handleRemoveChecklistItem(index)}
+                                        className="text-gray-400 hover:text-red-500 transition-colors"
+                                    >
+                                        <Trash2 size={16} />
+                                    </button>
+                                </div>
+                            ))}
+                        </div>
+
+                        <div className="flex gap-2">
+                            <input
+                                type="text"
+                                value={newChecklistItem}
+                                onChange={(e) => setNewChecklistItem(e.target.value)}
+                                placeholder="Ej: Ausencia de fracturas agudas"
+                                className="flex-1 rounded-lg border-indigo-200 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2.5 border dark:bg-gray-900 dark:border-indigo-900/50 dark:text-white"
+                                onKeyDown={(e) => {
+                                    if (e.key === 'Enter') {
+                                        e.preventDefault();
+                                        handleAddChecklistItem();
+                                    }
+                                }}
+                            />
+                            <button
+                                type="button"
+                                onClick={handleAddChecklistItem}
+                                className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-bold rounded-lg text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-all shadow-md"
+                            >
+                                <Plus size={18} className="mr-1" />
+                                Añadir
+                            </button>
+                        </div>
                     </div>
 
                     <div className="col-span-2">

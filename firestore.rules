@@ -112,5 +112,31 @@ service cloud.firestore {
       // Only Admins can view/manage feedback matches
       allow read, update, delete: if isAdmin();
     }
+
+    // Settings (Global Vocabulary)
+    match /settings/{settingId} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
+    }
+ 
+    // User Reports (Stored reports from Dictation/Training)
+    match /user_reports/{reportId} {
+      // Users can read their own reports, Admins can read all
+      allow read: if isAuthenticated() && (resource.data.userId == request.auth.uid || isAdmin());
+      
+      // Users can create reports where they are the owner
+      allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
+      
+      // Only Admins or the owner can delete (though we might not need delete yet)
+      allow delete: if isAdmin() || (isAuthenticated() && resource.data.userId == request.auth.uid);
+    }
+    
+    // Support Materials (Teaching resources)
+    match /support_materials/{materialId} {
+      // Students can read
+      allow read: if isAuthenticated();
+      // Only Admins/Instructors can create/update/delete
+      allow write: if isAdmin();
+    }
   }
 }

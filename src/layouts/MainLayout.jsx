@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
-import { Layout, BookOpen, FileText, Menu, User, LogOut, Settings, Sun, Moon, Crown } from 'lucide-react';
+import { Layout, BookOpen, FileText, Menu, User, LogOut, Settings, Sun, Moon, Crown, Mic, Library } from 'lucide-react';
 import clsx from 'clsx';
 import { useTranslation } from 'react-i18next';
 import LanguageSwitcher from '../components/LanguageSwitcher';
@@ -21,6 +21,8 @@ const MainLayout = () => {
         { path: '/', label: t('navigation.home'), icon: Layout },
         { path: '/anatomy', label: t('navigation.anatomy'), icon: BookOpen },
         { path: '/cases', label: t('navigation.cases'), icon: FileText },
+        { path: '/report-training', label: t('navigation.reportTraining'), icon: Mic },
+        { path: '/support-material', label: t('navigation.supportMaterial'), icon: Library },
     ];
 
     // Immersive mode: Full width for Anatomy Viewer, Instructor Editors, and Anatomy Index

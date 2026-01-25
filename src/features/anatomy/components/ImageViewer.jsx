@@ -205,11 +205,11 @@ const ImageViewer = ({ images = [], imageStacks = [], alt, overlays = [] }) => {
                 {/* Toolbar */}
                 <div className="flex flex-wrap items-center gap-2 p-2 bg-gray-900 border-b border-gray-800 text-gray-300">
                     <div className="flex items-center space-x-1 bg-black/30 rounded-lg p-1">
-                        <button onClick={() => setZoom(z => Math.max(1, z - 0.1))} className="p-1.5 hover:bg-gray-700 rounded transition-colors" title="Zoom Out">
+                        <button onClick={() => setZoom(z => Math.max(1, z - 0.1))} className="p-1.5 hover:bg-gray-700 rounded transition-colors" title={t('anatomy.viewer.tools.zoomOut')}>
                             <ZoomOut size={16} />
                         </button>
                         <span className="text-xs w-8 text-center font-medium font-mono">{Math.round(zoom * 100)}%</span>
-                        <button onClick={() => setZoom(z => Math.min(3, z + 0.1))} className="p-1.5 hover:bg-gray-700 rounded transition-colors" title="Zoom In">
+                        <button onClick={() => setZoom(z => Math.min(3, z + 0.1))} className="p-1.5 hover:bg-gray-700 rounded transition-colors" title={t('anatomy.viewer.tools.zoomIn')}>
                             <ZoomIn size={16} />
                         </button>
                     </div>
@@ -243,7 +243,7 @@ const ImageViewer = ({ images = [], imageStacks = [], alt, overlays = [] }) => {
                     <div className="ml-auto">
                         <button onClick={resetTools} className="flex items-center px-3 py-1.5 text-xs font-medium text-gray-400 hover:text-white bg-gray-800 hover:bg-gray-700 rounded-lg transition-colors">
                             <RotateCcw size={14} className="mr-1.5" />
-                            Reset
+                            {t('anatomy.viewer.tools.reset')}
                         </button>
                     </div>
                 </div>
@@ -317,7 +317,7 @@ const ImageViewer = ({ images = [], imageStacks = [], alt, overlays = [] }) => {
                         )}
                         {currentImages.length > 1 && (
                             <div className="bg-black/60 backdrop-blur text-indigo-400 font-mono text-xs px-2 py-1 rounded border border-white/10">
-                                Img: {currentIndex + 1} / {currentImages.length}
+                                {t('anatomy.viewer.tools.img')}: {currentIndex + 1} / {currentImages.length}
                             </div>
                         )}
                     </div>

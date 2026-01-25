@@ -61,7 +61,7 @@ const CaseDetail = () => {
         return (
             <div className="text-center py-12">
                 <AlertCircle className="mx-auto h-12 w-12 text-red-500" />
-                <h3 className="mt-2 text-lg font-medium text-red-900">Error loading case</h3>
+                <h3 className="mt-2 text-lg font-medium text-red-900">{t('common.error', 'Error')}</h3>
                 <p className="mt-1 text-sm text-red-500">{error}</p>
                 <div className="mt-6">
                     <Link to="/cases" className="text-indigo-600 hover:text-indigo-500">
@@ -138,7 +138,7 @@ const CaseDetail = () => {
                                         <div className="flex items-center justify-between mb-4">
                                             <h3 className="text-sm font-bold text-yellow-400 flex items-center uppercase tracking-wider">
                                                 <Info className="w-4 h-4 mr-2" />
-                                                {t('cases.discussion', 'Discusión del Caso')}
+                                                {t('cases.discussion')}
                                             </h3>
                                             {/* Font Size Controls */}
                                             <div className="flex items-center bg-gray-800 rounded-lg p-1 space-x-1">
@@ -146,7 +146,7 @@ const CaseDetail = () => {
                                                     onClick={decreaseFontSize}
                                                     disabled={fontSize <= 100}
                                                     className="p-1 px-2 text-xs font-medium text-gray-400 hover:text-white disabled:opacity-30 transition-colors"
-                                                    title="Reducir tamaño"
+                                                    title={t('reportEditor.fontSize.decrease')}
                                                 >
                                                     A-
                                                 </button>
@@ -155,7 +155,7 @@ const CaseDetail = () => {
                                                     onClick={increaseFontSize}
                                                     disabled={fontSize >= 200}
                                                     className="p-1 px-2 text-xs font-medium text-gray-400 hover:text-white disabled:opacity-30 transition-colors"
-                                                    title="Aumentar tamaño"
+                                                    title={t('reportEditor.fontSize.increase')}
                                                 >
                                                     A+
                                                 </button>
@@ -178,7 +178,7 @@ const CaseDetail = () => {
                                         {/* Attachments */}
                                         {caseItem.attachments && caseItem.attachments.length > 0 && (
                                             <div className="mt-4 pt-4 border-t border-gray-800">
-                                                <h4 className="text-xs font-semibold text-gray-500 uppercase mb-3">Material Complementario</h4>
+                                                <h4 className="text-xs font-semibold text-gray-500 uppercase mb-3">{t('reportEditor.supplementalMaterial')}</h4>
                                                 <FileAttachment
                                                     attachments={caseItem.attachments}
                                                     readOnly={true}
@@ -207,6 +207,8 @@ const CaseDetail = () => {
                                     caseItem.history}
                             </p>
                         </div>
+
+                        {/* Dictation Mode REMOVED */}
 
                         {/* Diagnosis Form */}
                         <DiagnosisForm

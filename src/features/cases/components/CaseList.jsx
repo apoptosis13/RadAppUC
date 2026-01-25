@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { caseService } from '../../../services/caseService';
 import { Activity, Brain, FileText } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import PageHeader from '../../../components/PageHeader';
 
 const CaseList = () => {
     const [cases, setCases] = useState([]);
@@ -31,31 +32,32 @@ const CaseList = () => {
 
     const categories = ['All', 'Beginner', 'Intermediate', 'Advanced'];
 
-    const filteredCases = selectedCategory === 'All'
+    const filteredCases = (selectedCategory === 'All'
         ? cases
-        : cases.filter(c => c.difficulty === selectedCategory);
+        : cases.filter(c => c.difficulty === selectedCategory)
+    ).filter(c => c.type !== 'training'); // Exclude training cases
 
     return (
         <div className="space-y-6">
-            <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
-                <h1 className="text-3xl font-bold text-gray-900">{t('cases.pageTitle')}</h1>
-
-                {/* Category Tabs */}
-                <div className="flex space-x-2 bg-gray-100 dark:bg-gray-800 p-1 rounded-lg">
-                    {categories.map((category) => (
-                        <button
-                            key={category}
-                            onClick={() => setSelectedCategory(category)}
-                            className={`px-4 py-2 rounded-md text-sm font-medium transition-colors duration-200 ${selectedCategory === category
-                                ? 'bg-white dark:bg-gray-700 text-indigo-600 dark:text-indigo-400 shadow-sm'
-                                : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
-                                }`}
-                        >
-                            {category === 'All' ? t('cases.all') : t(`cases.difficulty.${category}`)}
-                        </button>
-                    ))}
-                </div>
-            </div>
+            <PageHeader
+                title={t('cases.pageTitle')}
+                actions={
+                    <div className="flex space-x-1 bg-gray-100 dark:bg-gray-800 p-1 rounded-lg border border-gray-200 dark:border-gray-700">
+                        {categories.map((category) => (
+                            <button
+                                key={category}
+                                onClick={() => setSelectedCategory(category)}
+                                className={`px-4 py-1.5 rounded-md text-xs font-bold transition-all duration-200 ${selectedCategory === category
+                                    ? 'bg-white dark:bg-gray-700 text-indigo-600 dark:text-indigo-400 shadow-sm'
+                                    : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
+                                    }`}
+                            >
+                                {category === 'All' ? t('cases.all') : t(`cases.difficulty.${category}`)}
+                            </button>
+                        ))}
+                    </div>
+                }
+            />
 
             <div className="text-sm text-gray-500">
                 {t('cases.showing', { count: filteredCases.length })}
@@ -88,14 +90,14 @@ const CaseList = () => {
                                 <div className="flex items-center justify-between mb-2">
                                     <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
                                         {(caseItem.titleKey && t(caseItem.titleKey)) ||
-                                            (i18n.language === 'en' && caseItem.title_en) ||
+                                            (i18n.language?.startsWith('en') && caseItem.title_en) ||
                                             caseItem.title}
                                     </h3>
                                     <Icon className="w-5 h-5 text-gray-400" />
                                 </div>
                                 <p className="text-sm text-gray-600 dark:text-gray-300 line-clamp-2 mb-3">
                                     {(caseItem.historyKey && t(caseItem.historyKey)) ||
-                                        (i18n.language === 'en' && caseItem.history_en) ||
+                                        (i18n.language?.startsWith('en') && caseItem.history_en) ||
                                         caseItem.history}
                                 </p>
                                 <div className="flex items-center justify-between">

@@ -3,13 +3,17 @@
     "home": "Inicio",
     "anatomy": "Anatomía",
     "cases": "Casos",
+    "training": "Entrenamiento",
+    "supportMaterial": "Material Docente",
+    "reportTraining": "Entrenamiento de Informes",
     "instructor": "Portal del Instructor",
     "profile": "Mi Perfil"
   },
   "common": {
     "save": "Guardar",
     "cancel": "Cancelar",
-    "confirm": "Confirmar"
+    "confirm": "Confirmar",
+    "untitled": "Sin Título"
   },
   "home": {
     "title": "VoxelHub",
@@ -25,8 +29,18 @@
       },
       "cases": {
         "title": "Biblioteca de Casos",
-        "description": "Casos de estudio y desafío diagnóstico de dificultad variable.",
+        "description": "Estudia casos resueltos para aprender anatomía patológica y diagnósticos clave.",
         "link": "Explorar Casos"
+      },
+      "training": {
+        "title": "Entrenamiento de Informe",
+        "description": "Practica el dictado de informes radiológicos con asistencia de IA en casos de entrenamiento.",
+        "link": "Iniciar Entrenamiento"
+      },
+      "support": {
+        "title": "Material Docente",
+        "description": "Videos, presentaciones y artículos de apoyo para tu formación en radiología MSK.",
+        "link": "Ver material"
       },
       "instructor": {
         "title": "Portal del Instructor",
@@ -85,7 +99,7 @@
       "descriptionTitle": "DESCRIPCIÓN",
       "tools": {
         "rotate": "Rotar",
-        "flip": "Voltear",
+        "flipH": "Voltear Horizontal",
         "zoomIn": "Acercar",
         "zoomOut": "Alejar",
         "fullscreen": "Pantalla Completa",
@@ -94,9 +108,9 @@
         "adjust": "Ajustar Imagen",
         "brightness": "Brillo",
         "contrast": "Contraste",
-        "rotate": "Rotar",
-        "flipH": "Voltear",
-        "reset": "Restablecer"
+        "reset": "Restablecer",
+        "series": "Serie",
+        "img": "Imág"
       }
     },
     "categories": {
@@ -227,23 +241,70 @@
   "instructor": {
     "dashboard": "Panel de Control",
     "createCase": "Crear Nuevo Caso",
+    "manageLibrary": "Gestión de Biblioteca",
+    "manageLibraryDesc": "Administrar casos de la biblioteca de estudio general.",
+    "manageTraining": "Gestión de Entrenamiento",
+    "manageTrainingDesc": "Administrar casos específicos para práctica de informes.",
+    "manageAnatomy": "Gestión de Anatomía",
+    "manageAnatomyDesc": "Administrar módulos de anatomía y anotaciones.",
     "manageCases": "Gestionar Casos",
+    "access": "Acceder",
     "form": {
-      "title": "Título del Caso",
+      "title": "Título",
+      "titleEn": "Título (Inglés)",
       "modality": "Modalidad",
       "difficulty": "Dificultad",
+      "caseType": "Tipo de Caso",
       "history": "Historia Clínica",
+      "historyEn": "Historia (Inglés)",
       "imageUrl": "Imagen del Caso",
       "uploadImage": "Subir un archivo",
       "orDrag": "o arrastrar y soltar",
       "orEnterUrl": "O ingresar URL de imagen",
       "removeImage": "Eliminar imagen",
       "correctDiagnosis": "Diagnóstico Correcto",
+      "correctDiagnosisEn": "Diagnóstico (Inglés)",
       "submit": "Guardar Caso",
-      "success": "Caso creado exitosamente"
+      "success": "Caso guardado exitosamente",
+      "editCase": "Editar Caso",
+      "newCase": "Nuevo Caso",
+      "seriesName": "Nombre de la Serie (ej. Axial T2)",
+      "invertOrder": "Invertir Orden de Imágenes",
+      "dragDrop": "Arrastra imágenes o usa '+ Añadir imágenes'",
+      "addImages": "Añadir Imágenes",
+      "addMoreImages": "Añadir más imágenes al final",
+      "removeImageTooltip": "Eliminar esta imagen",
+      "autoTranslate": "Auto-traducir",
+      "autoTranslateTooltip": "Traducir automáticamente desde el español",
+      "aliases": "Diagnósticos Alternativos (Sinónimos aceptados)",
+      "aliasesPlaceholder": "Agregar variante aceptada (ej. 'Desgarro menisco')",
+      "aliasesHint": "Agrega variantes en español o inglés que también deban considerarse correctas.",
+      "manualQuestions": "Preguntas Manuales",
+      "addQuestion": "Añadir Pregunta",
+      "imageManager": "Gestor de Imágenes y Series",
+      "remove": "Eliminar",
+      "img": "Imagen",
+      "option": "Opción",
+      "optionEn": "Opción (Inglés)",
+      "checklistDesc": "Define frases o hallazgos clave que el alumno debe mencionar obligatoriamente en su informe.",
+      "add": "Añadir",
+      "loading": "Cargando caso...",
+      "translating": "Traduciendo...",
+      "translationSuccess": "Traducción completada. Por favor revisa el contenido.",
+      "translationError": "No hay texto en español para traducir.",
+      "deleteStackConfirm": "¿Eliminar esta serie y sus imágenes?",
+      "invertStackConfirm": "¿Invertir el orden de las imágenes en esta serie?",
+      "aiQuizExclusive": "Quiz IA Exclusivo",
+      "hideManualQuestions": "Oculta las preguntas manuales en el visualizador.",
+      "discussion": "Discusión del Caso (Enriquece la explicación)",
+      "discussionHintEs": "Utiliza este editor para explicar el caso, agregar perlas clínicas, imágenes explicativas y dar formato al texto en Español.",
+      "discussionHintEn": "Versión en inglés de la discusión del caso. Puedes traducir automáticamente desde el español o editar manualmente.",
+      "translateWithAi": "Traducir Automáticamente con IA",
+      "retranslate": "Regenerar traducción"
     },
     "users": {
       "title": "Gestión de Usuarios",
+      "desc": "Gestionar usuarios y permisos de la plataforma.",
       "addUser": "Agregar Usuario",
       "editUser": "Editar Usuario",
       "deleteConfirm": "¿Está seguro de eliminar este usuario?",
@@ -267,6 +328,47 @@
         "role": "Rol",
         "save": "Guardar Usuario",
         "cancel": "Cancelar"
+      }
+    },
+    "materials": {
+      "title": "Gestión de Material Docente",
+      "subtitle": "Sube, edita y organiza los recursos pedagógicos de la plataforma.",
+      "newMaterial": "Nuevo Material",
+      "editMaterial": "Editar Material",
+      "form": {
+        "title": "Título (Español)",
+        "titleEn": "Título (Inglés)",
+        "titlePlaceholder": "Título del recurso...",
+        "description": "Descripción (Español)",
+        "descriptionEn": "Descripción (Inglés)",
+        "descriptionPlaceholder": "Resumen o descripción del material...",
+        "category": "Categoría",
+        "type": "Tipo de Recurso",
+        "url": "URL del Recurso",
+        "urlPlaceholder": "https://...",
+        "provider": "Proveedor",
+        "thumbnail": "URL Miniatura (Opcional)",
+        "bunnyTip": "Para Bunny.net usa el link de 'Embed' (iframe src)",
+        "save": "Guardar Cambios",
+        "create": "Crear Material"
+      },
+      "list": {
+        "title": "Lista de Materiales",
+        "searchPlaceholder": "Buscar material...",
+        "table": {
+          "resource": "Recurso",
+          "type": "Tipo",
+          "category": "Categoría",
+          "actions": "Acciones"
+        },
+        "empty": "No se encontraron materiales registrados."
+      },
+      "alerts": {
+        "deleteConfirm": "¿Estás seguro de que deseas eliminar este material?",
+        "deleteError": "Error al eliminar material",
+        "saveSuccess": "Material actualizado",
+        "createSuccess": "Material creado",
+        "saveError": "Error al guardar material"
       }
     }
   },
@@ -361,5 +463,110 @@
       "success": "¡Gracias! Tu reporte ha sido enviado.",
       "error": "Error al enviar reporte."
     }
+  },
+  "supportMaterial": {
+    "title": "Material de Apoyo Radiológico",
+    "subtitle": "Archivo docente con videos, presentaciones y guías clínicas para tu formación.",
+    "searchPlaceholder": "Buscar por título, tema o palabra clave...",
+    "noResults": {
+      "title": "No se encontraron materiales",
+      "desc": "Prueba con otros términos de búsqueda o selecciona otra categoría."
+    },
+    "modalities": {
+      "all": "Todas las modalidades",
+      "rx": "Radiografía / General",
+      "us": "Ecografía",
+      "mri": "Resonancia Magnética",
+      "ct": "Tomografía Computada",
+      "other": "Otros"
+    },
+    "types": {
+      "all": "Todos los tipos",
+      "video": "Videos",
+      "presentation": "Presentaciones",
+      "article": "Artículos"
+    },
+    "card": {
+      "view": "Ver material",
+      "description": "Descripción"
+    }
+  },
+  "training": {
+    "dashboard": {
+      "title": "Entrenamiento de Informes",
+      "subtitle": "Selecciona un caso clínico y practica tu dictado y generación de informes radiológicos.",
+      "searchPlaceholder": "Buscar casos por título o diagnóstico...",
+      "noCases": "No se encontraron casos.",
+      "startPractice": "INICIAR PRÁCTICA",
+      "noDescription": "Sin descripción disponible."
+    },
+    "workspace": {
+      "loading": "Cargando caso...",
+      "caseNotFound": "Caso no encontrado",
+      "hideReport": "Ocultar Informe",
+      "showReport": "Mostrar Informe",
+      "trainingMode": "Modo Entrenamiento",
+      "history": "Historial",
+      "vocabulary": "Vocabulario",
+      "checklist": "Cotejo",
+      "editor": "Editor",
+      "savedReports": "Informes Guardados",
+      "saving": "Guardando...",
+      "saveBtn": "Guardar",
+      "saveSuccess": "Informe guardado correctamente.",
+      "saveError": "Error al guardar el informe.",
+      "aiError": "Error al procesar con IA. Se usará el texto original."
+    }
+  },
+  "dictation": {
+    "title": "Modo Dictado",
+    "placeholder": "Presiona GRABAR para comenzar o escribe aquí...",
+    "listening": "Escuchando...",
+    "micConnected": "SpeechMike Conectado",
+    "connectMic": "Conectar Philips SpeechMike",
+    "resetHint": "Resetear dictado",
+    "resetConfirm": "¿Borrar todo el dictado?",
+    "notSupported": "El Modo Dictado no es compatible con este navegador. Por favor use Chrome o Edge.",
+    "heard": "Oído:",
+    "buttons": {
+      "start": "INICIAR GRABACIÓN",
+      "stop": "PAUSAR / DETENER",
+      "pause": "PAUSAR",
+      "resume": "REANUDAR",
+      "finalizeSession": "FINALIZAR SESIÓN",
+      "generateReport": "GENERAR INFORME FINAL",
+      "polishing": "PULIENDO INFORME (IA)..."
+    }
+  },
+  "reportEditor": {
+    "exam": "Examen / Título",
+    "findings": "Hallazgos",
+    "impression": "Impresión / Conclusión",
+    "placeholder": "Ej: RM COLUMNA TOTAL",
+    "supplementalMaterial": "Material Complementario",
+    "fontSize": {
+      "title": "Tamaño de Texto",
+      "increase": "Aumentar tamaño",
+      "decrease": "Reducir tamaño"
+    }
+  },
+  "vocabulary": {
+    "title": "Gestor de Vocabulario",
+    "titleVoice": "Entrenamiento de Voz",
+    "desc": "Entrena a la IA con términos médicos específicos.",
+    "descVoice": "Enseña a la IA tus patrones de habla específicos.",
+    "personal": "Mi Vocabulario",
+    "voice": "Voz Natural",
+    "global": "Global",
+    "voiceInputLabel": "Cuando el sistema escucha:",
+    "voiceOutputLabel": "Realmente quise decir:",
+    "saveVoice": "Guardar Ejemplo de Voz",
+    "addBtn": "Agregar",
+    "globalLock": "El vocabulario global es gestionado por instructores.",
+    "loading": "Cargando...",
+    "emptyVoice": "Sin ejemplos de voz personalizados.",
+    "emptyVoiceHint": "Agrega ejemplos arriba para que la IA entienda tu acento.",
+    "emptyList": "Lista vacía.",
+    "emptyListHint": "Puedes pegar una lista de palabras."
   }
 }

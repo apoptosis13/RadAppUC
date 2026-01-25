@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Plus, Edit, Trash2, X, Check, XCircle, Ban, PlayCircle, Crown, ArrowRightLeft, Search, ArrowUp, ArrowDown } from 'lucide-react';
+import { Plus, Edit, Trash2, X, Check, XCircle, Ban, PlayCircle, Crown, ArrowRightLeft, Search, ArrowUp, ArrowDown, Users } from 'lucide-react';
+import PageHeader from '../../../components/PageHeader';
 import { authService } from '../../../services/authService';
 import { auth } from '../../../config/firebase';
 import { onAuthStateChanged } from 'firebase/auth';
@@ -179,23 +180,24 @@ const UserManagementPage = () => {
 
     return (
         <div className="space-y-6">
-            <div className="flex justify-between items-center flex-wrap gap-4">
-                <h1 className="text-2xl font-bold text-gray-900">{t('instructor.users.title')}</h1>
-
-                {/* Search Bar */}
-                <div className="relative">
-                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                        <Search className="h-5 w-5 text-gray-400" />
+            <PageHeader
+                title={t('instructor.users.title')}
+                icon={Users}
+                actions={
+                    <div className="relative">
+                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <Search className="h-4 w-4 text-gray-400" />
+                        </div>
+                        <input
+                            type="text"
+                            placeholder="Buscar usuario..."
+                            className="block w-full pl-9 pr-3 py-1.5 border border-gray-300 dark:border-gray-600 rounded-lg leading-5 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent sm:text-sm shadow-sm transition-all"
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                        />
                     </div>
-                    <input
-                        type="text"
-                        placeholder="Buscar usuario..."
-                        className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm shadow-sm"
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                    />
-                </div>
-            </div>
+                }
+            />
 
             {error && (
                 <div className="bg-red-50 border-l-4 border-red-400 p-4">

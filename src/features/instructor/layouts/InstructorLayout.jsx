@@ -1,5 +1,5 @@
 import { Outlet, Link, useLocation } from 'react-router-dom';
-import { LayoutDashboard, PlusCircle, FileText, LogOut, Shield, ArrowLeft, Users, Brain, Activity } from 'lucide-react';
+import { LayoutDashboard, PlusCircle, FileText, LogOut, Shield, ArrowLeft, Users, Brain, Activity, Sparkles } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 
@@ -11,7 +11,8 @@ const InstructorLayout = () => {
     const { logout, user } = useAuth();
 
     const navigation = [
-        { name: t('instructor.manageCases'), href: '/instructor/cases', icon: FileText, color: 'blue' },
+        { name: t('instructor.manageLibrary'), href: '/instructor/cases?type=library', icon: FileText, color: 'blue' },
+        { name: t('instructor.manageTraining'), href: '/instructor/cases?type=training', icon: Sparkles, color: 'orange' },
         { name: 'Anatomía', href: '/instructor/anatomy', icon: Brain, color: 'purple' },
         { name: t('instructor.users.title'), href: '/instructor/users', icon: Users, color: 'orange' },
     ];
@@ -52,7 +53,9 @@ const InstructorLayout = () => {
 
                     {navigation.map((item) => {
                         const Icon = item.icon;
-                        const isActive = location.pathname === item.href;
+                        const isActive = (item.href.includes('?')
+                            ? (location.pathname + location.search) === item.href
+                            : location.pathname === item.href);
                         const colorClass = item.color || 'indigo';
 
                         // Dynamic Tailwind mappings

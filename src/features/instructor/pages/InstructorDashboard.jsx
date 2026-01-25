@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { FileText, Users, Brain, PlusCircle, ArrowRight, Activity } from 'lucide-react';
+import { FileText, Users, Brain, PlusCircle, ArrowRight, Activity, Sparkles, Library } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 const InstructorDashboard = () => {
@@ -8,19 +8,29 @@ const InstructorDashboard = () => {
 
     const cards = [
         {
-            title: t('instructor.manageCases'),
-            description: 'Ver, editar y eliminar casos clínicos existentes.',
+            title: t('instructor.manageLibrary'),
+            description: t('instructor.manageLibraryDesc'),
             icon: FileText,
-            href: '/instructor/cases',
+            href: '/instructor/cases?type=library',
             color: 'text-blue-400',
             bg: 'bg-blue-500/10',
             border: 'border-blue-500/20',
             hover: 'hover:border-blue-500/50'
         },
+        {
+            title: t('instructor.manageTraining'),
+            description: t('instructor.manageTrainingDesc'),
+            icon: Sparkles,
+            href: '/instructor/cases?type=training',
+            color: 'text-amber-400',
+            bg: 'bg-amber-500/10',
+            border: 'border-amber-500/20',
+            hover: 'hover:border-amber-500/50'
+        },
 
         {
-            title: 'Gestión de Anatomía',
-            description: 'Administrar módulos de anatomía y anotaciones.',
+            title: t('instructor.manageAnatomy'),
+            description: t('instructor.manageAnatomyDesc'),
             icon: Brain,
             href: '/instructor/anatomy',
             color: 'text-purple-400',
@@ -30,13 +40,23 @@ const InstructorDashboard = () => {
         },
         {
             title: t('instructor.users.title'),
-            description: 'Gestionar usuarios y permisos de la plataforma.',
+            description: t('instructor.users.desc'),
             icon: Users,
             href: '/instructor/users',
             color: 'text-orange-400',
             bg: 'bg-orange-500/10',
             border: 'border-orange-500/20',
             hover: 'hover:border-orange-500/50'
+        },
+        {
+            title: t('instructor.materials.title'),
+            description: t('instructor.materials.subtitle'),
+            icon: Library,
+            href: '/instructor/materials',
+            color: 'text-emerald-400',
+            bg: 'bg-emerald-500/10',
+            border: 'border-emerald-500/20',
+            hover: 'hover:border-emerald-500/50'
         }
     ];
 
@@ -47,7 +67,7 @@ const InstructorDashboard = () => {
                     <h1 className="text-3xl font-bold text-white mb-1">
                         {t('instructor.dashboard')}
                     </h1>
-                    <p className="text-gray-400 text-sm">Administra contenido y usuarios de VoxelHub</p>
+                    <p className="text-gray-400 text-sm">{t('instructor.dashboardSubtitle', 'Administra contenido y usuarios de VoxelHub')}</p>
                 </div>
             </div>
 
@@ -73,7 +93,7 @@ const InstructorDashboard = () => {
                                 {card.description}
                             </p>
                             <div className={`text-sm font-medium ${card.color} flex items-center mt-auto opacity-0 group-hover:opacity-100 transform translate-y-2 group-hover:translate-y-0 transition-all duration-300`}>
-                                Acceder <ArrowRight className="ml-1 w-4 h-4" />
+                                {t('instructor.access')} <ArrowRight className="ml-1 w-4 h-4" />
                             </div>
                         </Link>
                     );

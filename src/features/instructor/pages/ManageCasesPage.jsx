@@ -7,7 +7,7 @@ import { useTranslation } from 'react-i18next';
 const ManageCasesPage = () => {
     const [cases, setCases] = useState([]);
     const [selectedCategory, setSelectedCategory] = useState('All');
-    const { t } = useTranslation();
+    const { t, i18n } = useTranslation();
 
     useEffect(() => {
         const fetchCases = async () => {
@@ -109,7 +109,9 @@ const ManageCasesPage = () => {
                                             </div>
                                             <div className="ml-4">
                                                 <div className="flex items-center">
-                                                    <p className="font-medium text-indigo-600 dark:text-indigo-400 truncate">{caseItem.title || t(caseItem.titleKey)}</p>
+                                                    <p className="font-medium text-indigo-600 dark:text-indigo-400 truncate">
+                                                        {(i18n.language?.startsWith('en') && caseItem.title_en) ? caseItem.title_en : (caseItem.title || t(caseItem.titleKey))}
+                                                    </p>
                                                     <span className={`ml-2 px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${caseItem.difficulty === 'Beginner' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' :
                                                         caseItem.difficulty === 'Intermediate' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200' :
                                                             'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
@@ -119,7 +121,9 @@ const ManageCasesPage = () => {
                                                 </div>
                                                 <div className="mt-2 flex">
                                                     <div className="flex items-center text-sm text-gray-500 dark:text-gray-400">
-                                                        <p className="truncate">{caseItem.history || t(caseItem.historyKey)}</p>
+                                                        <p className="truncate">
+                                                            {(i18n.language?.startsWith('en') && caseItem.history_en) ? caseItem.history_en : (caseItem.history || t(caseItem.historyKey))}
+                                                        </p>
                                                     </div>
                                                 </div>
                                             </div>

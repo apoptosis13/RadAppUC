@@ -1,4 +1,4 @@
-import React, { useCallback, useState, useEffect } from 'react';
+import React, { useCallback, useState, useEffect, useRef } from 'react';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import { Image } from '@tiptap/extension-image';
@@ -72,7 +72,7 @@ const FontSize = Extension.create({
     },
 });
 
-const MenuBar = ({ editor, onImageSelect }) => {
+const MenuBar = ({ editor, onImageSelect, allowImages = true }) => {
     if (!editor) {
         return null;
     }
@@ -189,16 +189,19 @@ const MenuBar = ({ editor, onImageSelect }) => {
                 <ListOrdered className="w-4 h-4" />
             </button>
 
-            <div className="w-px h-5 bg-gray-700 mx-1" />
-
-            <button
-                type="button"
-                onClick={addImage}
-                className="p-1.5 rounded transition-colors text-gray-400 hover:bg-gray-800 hover:text-white"
-                title="Insertar Imagen"
-            >
-                <ImageIcon className="w-4 h-4" />
-            </button>
+            {allowImages && (
+                <>
+                    <div className="w-px h-5 bg-gray-700 mx-1" />
+                    <button
+                        type="button"
+                        onClick={addImage}
+                        className="p-1.5 rounded transition-colors text-gray-400 hover:bg-gray-800 hover:text-white"
+                        title="Insertar Imagen"
+                    >
+                        <ImageIcon className="w-4 h-4" />
+                    </button>
+                </>
+            )}
 
             <div className="ml-auto flex items-center gap-1">
                 <button
@@ -222,7 +225,7 @@ const MenuBar = ({ editor, onImageSelect }) => {
     );
 };
 
-const RichTextEditor = ({ content, onChange, label, onImageUpload, editable = true, editorClassName = 'prose dark:prose-invert max-w-none focus:outline-none min-h-[150px] p-4 text-gray-300 text-sm' }) => {
+const RichTextEditor = ({ content, onChange, label, onImageUpload, editable = true, allowImages = true, hideToolbar = false, editorClassName = 'prose dark:prose-invert max-w-none focus:outline-none min-h-[150px] p-4 text-gray-300 text-sm' }) => {
     const [isFullScreen, setIsFullScreen] = useState(false);
     const [croppingImage, setCroppingImage] = useState(null); // { src: string, file: File }
     const [showCropper, setShowCropper] = useState(false);
@@ -257,9 +260,14 @@ const RichTextEditor = ({ content, onChange, label, onImageUpload, editable = tr
         }
     };
 
+    const isUpdatingRef = useRef(false);
+
     const editor = useEditor({
         extensions: [
-            StarterKit,
+            StarterKit.configure({
+                // Disable extensions that we are adding manually or that might conflict
+                history: true,
+            }),
             Underline,
             TextStyle,
             FontSize,
@@ -275,7 +283,10 @@ const RichTextEditor = ({ content, onChange, label, onImageUpload, editable = tr
         editable: editable,
         onUpdate: ({ editor }) => {
             if (onChange) {
+                isUpdatingRef.current = true;
                 onChange(editor.getHTML());
+                // Use a microtask/timeout to reset to allow React cycle to complete
+                setTimeout(() => { isUpdatingRef.current = false; }, 0);
             }
         },
         editorProps: {
@@ -290,15 +301,23 @@ const RichTextEditor = ({ content, onChange, label, onImageUpload, editable = tr
         handleImageToCrop(blobOrFile);
     };
 
-    // Update content if it changes externally (e.g., initial load or language switch)
+    // Update content if it changes externally (e.g., AI injection or manual reset)
     useEffect(() => {
-        if (editor && content !== editor.getHTML()) {
-            // Update if read-only (always sync) OR if editor is empty (initial load)
-            if (!editable || (editor.isEmpty && content)) {
-                editor.commands.setContent(content);
+        if (!editor) return;
+
+        const currentHTML = editor.getHTML();
+        const normalizedContent = content || '<p></p>'; // Tiptap default if empty
+        const normalizedCurrent = currentHTML === '<p></p>' ? '<p></p>' : currentHTML;
+
+        if (normalizedContent !== normalizedCurrent) {
+            console.log(`[RichTextEditor] External sync attempt. Internal: "${normalizedCurrent}", External: "${normalizedContent}", isUpdating: ${isUpdatingRef.current}`);
+            // Only update if the change didn't originate from the editor itself
+            if (!isUpdatingRef.current) {
+                console.log("[RichTextEditor] Applying external content.");
+                editor.commands.setContent(content || '', false);
             }
         }
-    }, [content, editor, editable]);
+    }, [content, editor]);
 
     // Update editable state if prop changes
     useEffect(() => {
@@ -312,11 +331,12 @@ const RichTextEditor = ({ content, onChange, label, onImageUpload, editable = tr
     }
 
     return (
-        <div className={`border border-gray-300 dark:border-gray-600 rounded-md overflow-hidden flex flex-col bg-white dark:bg-gray-800 transition-all font-sans ${isFullScreen ? 'fixed inset-0 z-50 m-0 rounded-none' : ''}`}>
-            {editable && (
+        <div className={`border border-gray-300 dark:border-gray-600 rounded-md overflow-hidden flex flex-col bg-white dark:bg-gray-800 transition-all font-sans h-full ${isFullScreen ? 'fixed inset-0 z-50 m-0 rounded-none' : ''}`}>
+            {editable && !hideToolbar && (
                 <MenuBar
                     editor={editor}
                     onImageSelect={handleFileSelect}
+                    allowImages={allowImages}
                 />
             )}
             <div className="flex-1 overflow-y-auto p-4 cursor-text bg-white dark:bg-gray-900" onClick={() => editor?.commands.focus()}>

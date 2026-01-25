@@ -1,20 +1,30 @@
 import React, { useState, useEffect } from 'react';
 import { caseService } from '../../../services/caseService';
+import PageHeader from '../../../components/PageHeader';
+import { Database } from 'lucide-react';
 import { Activity, Brain, FileText, Edit, Trash2, Plus, Search, Archive } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { useLocation } from 'react-router-dom';
 import CaseEditor from './CaseEditor';
 
 const CaseManagerPage = () => {
     const { t } = useTranslation();
+    const location = useLocation();
     const [viewMode, setViewMode] = useState('list'); // 'list', 'edit', 'create'
     const [selectedCaseId, setSelectedCaseId] = useState(null);
     const [cases, setCases] = useState([]);
     const [filter, setFilter] = useState('');
     const [category, setCategory] = useState('All');
+    const [caseType, setCaseType] = useState('library'); // 'library' | 'training'
 
     useEffect(() => {
+        const queryParams = new URLSearchParams(location.search);
+        const typeParam = queryParams.get('type');
+        if (typeParam === 'training' || typeParam === 'library') {
+            setCaseType(typeParam);
+        }
         loadCases();
-    }, []);
+    }, [location.search]);
 
     const loadCases = async () => {
         const data = await caseService.getAllCases();
@@ -65,7 +75,8 @@ const CaseManagerPage = () => {
     const filteredCases = cases.filter(c => {
         const matchesFilter = (c.title || '').toLowerCase().includes(filter.toLowerCase());
         const matchesCategory = category === 'All' || c.difficulty === category;
-        return matchesFilter && matchesCategory;
+        const matchesType = (c.type || 'library') === caseType;
+        return matchesFilter && matchesCategory && matchesType;
     });
 
     if (viewMode === 'create' || viewMode === 'edit') {
@@ -74,25 +85,49 @@ const CaseManagerPage = () => {
                 caseId={selectedCaseId}
                 onCancel={handleCancel}
                 onSuccess={handleSuccess}
+                initialType={caseType}
             />
         );
     }
 
     return (
         <div className="space-y-6">
-            <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
-                <div>
-                    <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Gestión de Casos</h1>
-                    <p className="text-sm text-gray-500">Administra el banco de casos clínicos y quizes.</p>
-                </div>
-                <button
-                    onClick={handleCreate}
-                    className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700"
-                >
-                    <Plus className="-ml-1 mr-2 h-5 w-5" />
-                    Nuevo Caso
-                </button>
-            </div>
+            <PageHeader
+                title="Gestión de Casos"
+                subtitle="Administra el banco de casos clínicos y quizes."
+                icon={Database}
+                actions={
+                    <div className="flex flex-wrap items-center gap-3">
+                        <div className="bg-gray-100 dark:bg-gray-700 p-1 rounded-lg flex space-x-1 border border-gray-200 dark:border-gray-600">
+                            <button
+                                onClick={() => setCaseType('library')}
+                                className={`px-4 py-1.5 rounded-md text-xs font-bold transition-all ${caseType === 'library'
+                                    ? 'bg-white dark:bg-gray-600 text-indigo-600 dark:text-white shadow-sm'
+                                    : 'text-gray-500 dark:text-gray-400 hover:text-gray-700'
+                                    }`}
+                            >
+                                Biblioteca
+                            </button>
+                            <button
+                                onClick={() => setCaseType('training')}
+                                className={`px-4 py-1.5 rounded-md text-xs font-bold transition-all ${caseType === 'training'
+                                    ? 'bg-white dark:bg-gray-600 text-indigo-600 dark:text-white shadow-sm'
+                                    : 'text-gray-500 dark:text-gray-400 hover:text-gray-700'
+                                    }`}
+                            >
+                                Entrenamiento
+                            </button>
+                        </div>
+                        <button
+                            onClick={handleCreate}
+                            className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-bold text-white bg-indigo-600 hover:bg-indigo-700 transition-all active:scale-95"
+                        >
+                            <Plus className="-ml-1 mr-2 h-5 w-5" />
+                            Nuevo Caso
+                        </button>
+                    </div>
+                }
+            />
 
             {/* Filters */}
             <div className="flex flex-col sm:flex-row justify-between items-center bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm gap-4">

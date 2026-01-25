@@ -10,6 +10,7 @@ import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { httpsCallable } from 'firebase/functions';
 
 const StackEditor = React.memo(({ stack, updateStackLabel, rotateStack, flipStack, invertStackOrder, handleImageUpload, removeStack, removeImage }) => {
+    const { t } = useTranslation();
     const [currentIndex, setCurrentIndex] = useState(0);
 
     // Reset index if out of bounds (e.g. after deletion)
@@ -60,18 +61,18 @@ const StackEditor = React.memo(({ stack, updateStackLabel, rotateStack, flipStac
                         value={stack.label}
                         onChange={(e) => updateStackLabel(stack.id, e.target.value)}
                         className="block w-full text-sm font-medium border-0 border-b border-gray-200 focus:ring-0 focus:border-indigo-500 bg-transparent px-0"
-                        placeholder="Nombre de la Serie (ej. Axial T2)"
+                        placeholder={t('instructor.form.seriesName')}
                     />
                 </div>
                 <div className="flex items-center space-x-2 bg-gray-50 dark:bg-gray-700/50 p-1.5 rounded-md self-end sm:self-auto">
-                    <button type="button" onClick={() => rotateStack(stack.id)} className="text-gray-500 hover:text-indigo-600 p-1" title="Rotar 90°">
+                    <button type="button" onClick={() => rotateStack(stack.id)} className="text-gray-500 hover:text-indigo-600 p-1" title={t('anatomy.viewer.tools.rotate')}>
                         <RotateCw size={16} />
                     </button>
-                    <button type="button" onClick={() => flipStack(stack.id)} className={`text-gray-500 hover:text-indigo-600 p-1 ${stack.flipH ? 'text-indigo-600 bg-indigo-50 dark:bg-indigo-900/30' : ''}`} title="Voltear Horizontal">
+                    <button type="button" onClick={() => flipStack(stack.id)} className={`text-gray-500 hover:text-indigo-600 p-1 ${stack.flipH ? 'text-indigo-600 bg-indigo-50 dark:bg-indigo-900/30' : ''}`} title={t('anatomy.viewer.tools.flipH')}>
                         <FlipHorizontal size={16} />
                     </button>
                     <div className="w-px h-4 bg-gray-300 dark:bg-gray-600 mx-1"></div>
-                    <button type="button" onClick={() => invertStackOrder(stack.id)} className="text-gray-500 hover:text-indigo-600 p-1" title="Invertir Orden Imágenes">
+                    <button type="button" onClick={() => invertStackOrder(stack.id)} className="text-gray-500 hover:text-indigo-600 p-1" title={t('instructor.form.invertOrder')}>
                         <ArrowUpDown size={16} />
                     </button>
                 </div>
@@ -86,10 +87,10 @@ const StackEditor = React.memo(({ stack, updateStackLabel, rotateStack, flipStac
             {stack.images.length === 0 ? (
                 <div className="text-center py-8 border-2 border-dashed border-gray-200 rounded-lg text-sm text-gray-500 flex flex-col items-center justify-center">
                     <ImageIcon className="w-8 h-8 text-gray-300 mb-2" />
-                    <span>Arrastra imágenes o usa "+ Añadir imágenes"</span>
+                    <span>{t('instructor.form.dragDrop')}</span>
                     <label className="mt-4 cursor-pointer inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700">
                         <Plus className="w-4 h-4 mr-1.5" />
-                        Añadir Imágenes
+                        {t('instructor.form.addImages')}
                         <input type="file" className="hidden" accept="image/*" multiple onChange={(e) => handleImageUpload(e, stack.id)} />
                     </label>
                 </div>
@@ -113,7 +114,7 @@ const StackEditor = React.memo(({ stack, updateStackLabel, rotateStack, flipStac
                         <button
                             onClick={() => removeImage(currentIndex, stack.id)}
                             className="absolute top-2 right-2 p-1.5 bg-red-600/80 hover:bg-red-600 text-white rounded-full transition-colors z-20"
-                            title="Eliminar esta imagen"
+                            title={t('instructor.form.removeImageTooltip')}
                         >
                             <Trash2 size={14} />
                         </button>
@@ -152,7 +153,7 @@ const StackEditor = React.memo(({ stack, updateStackLabel, rotateStack, flipStac
                     <div className="bg-gray-50 dark:bg-gray-900/50 px-4 py-2 border-t border-gray-200 dark:border-gray-700 flex justify-end">
                         <label className="cursor-pointer text-xs text-indigo-600 hover:text-indigo-500 font-medium flex items-center">
                             <Plus className="w-3 h-3 mr-1" />
-                            Añadir más imágenes al final
+                            {t('instructor.form.addMoreImages')}
                             <input type="file" className="hidden" accept="image/*" multiple onChange={(e) => handleImageUpload(e, stack.id)} />
                         </label>
                     </div>
@@ -162,7 +163,7 @@ const StackEditor = React.memo(({ stack, updateStackLabel, rotateStack, flipStac
     );
 });
 
-const CaseEditor = ({ caseId, onCancel, onSuccess }) => {
+const CaseEditor = ({ caseId, onCancel, onSuccess, initialType = 'library' }) => {
     const { t } = useTranslation();
     const [loading, setLoading] = useState(!!caseId);
     const [formData, setFormData] = useState({
@@ -170,6 +171,7 @@ const CaseEditor = ({ caseId, onCancel, onSuccess }) => {
         title_en: '',
         modality: 'X-Ray',
         difficulty: 'Beginner',
+        type: initialType,
         history: '',
         history_en: '',
         images: [],
@@ -184,10 +186,12 @@ const CaseEditor = ({ caseId, onCancel, onSuccess }) => {
         questions_en: [{ text: '', options: ['', '', '', ''], correctAnswer: 0 }],
         learningObjectives: ['', '', ''],
         learningObjectives_en: ['', '', ''],
-        hideManualQuestions: false
+        hideManualQuestions: false,
+        checklist: []
     });
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [newAlias, setNewAlias] = useState('');
+    const [newChecklistItem, setNewChecklistItem] = useState('');
     const [activeStackId, setActiveStackId] = useState(null); // 'main' or stack ID
     const [discussionTab, setDiscussionTab] = useState('es'); // 'es' | 'en'
     const [isTranslating, setIsTranslating] = useState(false);
@@ -204,7 +208,7 @@ const CaseEditor = ({ caseId, onCancel, onSuccess }) => {
     const handleAutoTranslate = async (sourceField, targetField) => {
         const sourceText = formData[sourceField];
         if (!sourceText || !sourceText.trim()) {
-            alert("No hay texto en español para traducir.");
+            alert(t('instructor.form.translationError'));
             return;
         }
 
@@ -214,7 +218,7 @@ const CaseEditor = ({ caseId, onCancel, onSuccess }) => {
             setFormData(prev => ({ ...prev, [targetField]: translation }));
         } catch (err) {
             console.error("Translation fail:", err);
-            alert("Error al traducir: " + err.message);
+            alert(t('common.error') + ": " + err.message);
         } finally {
             setTranslatingFields(prev => ({ ...prev, [targetField]: false }));
         }
@@ -231,6 +235,7 @@ const CaseEditor = ({ caseId, onCancel, onSuccess }) => {
                 if (!data.questions) data.questions = [{ text: '', options: ['', '', '', ''], correctAnswer: 0 }];
                 if (!data.learningObjectives) data.learningObjectives = ['', '', ''];
                 if (data.hideManualQuestions === undefined) data.hideManualQuestions = false;
+                if (!data.type) data.type = 'library';
 
                 // Ensure English fields exist
                 if (!data.title_en) data.title_en = '';
@@ -238,13 +243,14 @@ const CaseEditor = ({ caseId, onCancel, onSuccess }) => {
                 if (!data.correctDiagnosis_en) data.correctDiagnosis_en = '';
                 if (!data.discussionContent) data.discussionContent = '';
                 if (!data.attachments) data.attachments = [];
+                if (!data.checklist) data.checklist = [];
 
 
                 setFormData(data);
             }
         } catch (error) {
             console.error("Error loading case:", error);
-            alert("Error loading case");
+            alert(t('instructor.form.loadingError', 'Error loading case'));
         } finally {
             setLoading(false);
         }
@@ -386,7 +392,7 @@ const CaseEditor = ({ caseId, onCancel, onSuccess }) => {
     };
 
     const removeStack = (stackId) => {
-        if (window.confirm("¿Eliminar esta serie y sus imágenes?")) {
+        if (window.confirm(t('instructor.form.deleteStackConfirm'))) {
             setFormData(prev => ({
                 ...prev,
                 imageStacks: prev.imageStacks.filter(s => s.id !== stackId)
@@ -403,7 +409,7 @@ const CaseEditor = ({ caseId, onCancel, onSuccess }) => {
 
     // --- Stack Enhancements (Rotate, Flip, Invert) ---
     const invertStackOrder = (stackId) => {
-        if (!window.confirm("¿Invertir el orden de las imágenes en esta serie?")) return;
+        if (!window.confirm(t('instructor.form.invertStackConfirm'))) return;
         setFormData(prev => ({
             ...prev,
             imageStacks: prev.imageStacks.map(s =>
@@ -507,11 +513,28 @@ const CaseEditor = ({ caseId, onCancel, onSuccess }) => {
         }));
     };
 
+    // Checklist Handlers
+    const handleAddChecklistItem = () => {
+        if (!newChecklistItem.trim()) return;
+        setFormData(prev => ({
+            ...prev,
+            checklist: [...(prev.checklist || []), newChecklistItem.trim()]
+        }));
+        setNewChecklistItem('');
+    };
+
+    const handleRemoveChecklistItem = (index) => {
+        setFormData(prev => ({
+            ...prev,
+            checklist: prev.checklist.filter((_, i) => i !== index)
+        }));
+    };
+
     // --- Translation Logic ---
     const handleTranslateContent = async () => {
         const sourceText = formData.discussionContent;
         if (!sourceText || !sourceText.trim()) {
-            alert("No hay contenido para traducir.");
+            alert(t('instructor.form.translationError'));
             return;
         }
 
@@ -531,11 +554,11 @@ const CaseEditor = ({ caseId, onCancel, onSuccess }) => {
                 }));
                 // Switch to English tab to show result
                 setDiscussionTab('en');
-                alert("Traducción completada. Por favor revisa el contenido.");
+                alert(t('instructor.form.translationSuccess'));
             }
         } catch (error) {
             console.error("Translation error:", error);
-            alert("Error al traducir: " + error.message);
+            alert(t('common.error') + ": " + error.message);
         } finally {
             setIsTranslating(false);
         }
@@ -559,14 +582,14 @@ const CaseEditor = ({ caseId, onCancel, onSuccess }) => {
         }
     };
 
-    if (loading) return <div className="p-10 text-center">Cargando caso...</div>;
+    if (loading) return <div className="p-10 text-center">{t('instructor.form.loading')}</div>;
 
     return (
         <div className="bg-white dark:bg-gray-800 shadow rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700">
             {/* Header */}
             <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 flex justify-between items-center sticky top-0 z-20">
                 <h2 className="text-xl font-bold text-gray-900 dark:text-white">
-                    {caseId ? 'Editar Caso' : 'Nuevo Caso'}
+                    {caseId ? t('instructor.form.editCase') : t('instructor.form.newCase')}
                 </h2>
                 <div className="flex items-center space-x-3">
                     <button
@@ -586,27 +609,27 @@ const CaseEditor = ({ caseId, onCancel, onSuccess }) => {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div>
                             <label className="flex items-center justify-between text-sm font-medium text-gray-700 dark:text-gray-300">
-                                <span>Título</span>
+                                <span>{t('instructor.form.title')}</span>
                             </label>
                             <input type="text" name="title" value={formData.title} onChange={handleChange} required
                                 className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border dark:bg-gray-700 dark:border-gray-600 dark:text-white" />
                         </div>
                         <div>
                             <label className="flex items-center justify-between text-sm font-medium text-gray-700 dark:text-gray-300">
-                                <span>Title (English)</span>
+                                <span>{t('instructor.form.titleEn')}</span>
                                 <button
                                     type="button"
                                     onClick={() => handleAutoTranslate('title', 'title_en')}
                                     disabled={translatingFields.title_en || !formData.title}
                                     className="inline-flex items-center text-[10px] text-indigo-600 hover:text-indigo-500 font-bold uppercase tracking-wider"
-                                    title="Traducir automáticamente desde el español"
+                                    title={t('instructor.form.autoTranslateTooltip')}
                                 >
                                     {translatingFields.title_en ? (
                                         <Loader2 className="w-3 h-3 mr-1 animate-spin" />
                                     ) : (
                                         <Languages className="w-3 h-3 mr-1" />
                                     )}
-                                    Auto-traducir
+                                    {t('instructor.form.autoTranslate')}
                                 </button>
                             </label>
                             <input type="text" name="title_en" value={formData.title_en} onChange={handleChange}
@@ -615,27 +638,27 @@ const CaseEditor = ({ caseId, onCancel, onSuccess }) => {
 
                         <div>
                             <label className="flex items-center justify-between text-sm font-medium text-gray-700 dark:text-gray-300">
-                                <span>Diagnóstico Correcto</span>
+                                <span>{t('instructor.form.correctDiagnosis')}</span>
                             </label>
                             <input type="text" name="correctDiagnosis" value={formData.correctDiagnosis} onChange={handleChange} required
                                 className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border dark:bg-gray-700 dark:border-gray-600 dark:text-white" />
                         </div>
                         <div>
                             <label className="flex items-center justify-between text-sm font-medium text-gray-700 dark:text-gray-300">
-                                <span>Diagnosis (English)</span>
+                                <span>{t('instructor.form.correctDiagnosisEn')}</span>
                                 <button
                                     type="button"
                                     onClick={() => handleAutoTranslate('correctDiagnosis', 'correctDiagnosis_en')}
                                     disabled={translatingFields.correctDiagnosis_en || !formData.correctDiagnosis}
                                     className="inline-flex items-center text-[10px] text-indigo-600 hover:text-indigo-500 font-bold uppercase tracking-wider"
-                                    title="Traducir automáticamente desde el español"
+                                    title={t('instructor.form.autoTranslateTooltip')}
                                 >
                                     {translatingFields.correctDiagnosis_en ? (
                                         <Loader2 className="w-3 h-3 mr-1 animate-spin" />
                                     ) : (
                                         <Languages className="w-3 h-3 mr-1" />
                                     )}
-                                    Auto-traducir
+                                    {t('instructor.form.autoTranslate')}
                                 </button>
                             </label>
                             <input type="text" name="correctDiagnosis_en" value={formData.correctDiagnosis_en} onChange={handleChange}
@@ -655,7 +678,7 @@ const CaseEditor = ({ caseId, onCancel, onSuccess }) => {
                                             onClick={() => handleRemoveAlias(index)}
                                             className="text-red-500 hover:text-red-700 text-sm"
                                         >
-                                            Eliminar
+                                            {t('instructor.form.remove')}
                                         </button>
                                     </div>
                                 ))}
@@ -687,8 +710,58 @@ const CaseEditor = ({ caseId, onCancel, onSuccess }) => {
                             </p>
                         </div>
 
+                        {/* --- CHECKLIST (Pauta de Cotejo) --- */}
+                        <div className="col-span-1 md:col-span-2 bg-indigo-50/50 dark:bg-indigo-900/10 p-5 rounded-xl border border-indigo-100 dark:border-indigo-900/30">
+                            <label className="block text-sm font-bold text-indigo-900 dark:text-indigo-200 mb-2 flex items-center">
+                                <Sparkles className="w-4 h-4 mr-2" />
+                                {t('training.workspace.checklist')}
+                            </label>
+                            <p className="text-xs text-indigo-700/70 dark:text-indigo-300/50 mb-4">
+                                {t('instructor.form.checklistDesc', 'Define frases o hallazgos clave que el alumno debe mencionar obligatoriamente en su informe.')}
+                            </p>
+
+                            <div className="space-y-2 mb-4">
+                                {(formData.checklist || []).map((item, index) => (
+                                    <div key={index} className="flex items-center justify-between bg-white dark:bg-gray-800 p-3 rounded-lg border border-indigo-100 dark:border-indigo-900/50 shadow-sm">
+                                        <span className="text-sm text-gray-700 dark:text-gray-200">{item}</span>
+                                        <button
+                                            type="button"
+                                            onClick={() => handleRemoveChecklistItem(index)}
+                                            className="text-gray-400 hover:text-red-500 transition-colors"
+                                        >
+                                            <Trash2 size={16} />
+                                        </button>
+                                    </div>
+                                ))}
+                            </div>
+
+                            <div className="flex gap-2">
+                                <input
+                                    type="text"
+                                    value={newChecklistItem}
+                                    onChange={(e) => setNewChecklistItem(e.target.value)}
+                                    placeholder="Ej: Ausencia de fracturas agudas"
+                                    className="flex-1 rounded-lg border-indigo-200 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2.5 border dark:bg-gray-900 dark:border-indigo-900/50 dark:text-white"
+                                    onKeyDown={(e) => {
+                                        if (e.key === 'Enter') {
+                                            e.preventDefault();
+                                            handleAddChecklistItem();
+                                        }
+                                    }}
+                                />
+                                <button
+                                    type="button"
+                                    onClick={handleAddChecklistItem}
+                                    className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-bold rounded-lg text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-all shadow-md"
+                                >
+                                    <Plus size={18} className="mr-1" />
+                                    {t('instructor.form.add')}
+                                </button>
+                            </div>
+                        </div>
+
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Modalidad</label>
+                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">{t('instructor.form.modality')}</label>
                             <select name="modality" value={formData.modality} onChange={handleChange}
                                 className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border dark:bg-gray-700 dark:border-gray-600 dark:text-white">
                                 <option value="X-Ray">X-Ray</option>
@@ -698,7 +771,7 @@ const CaseEditor = ({ caseId, onCancel, onSuccess }) => {
                             </select>
                         </div>
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Dificultad</label>
+                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">{t('instructor.form.difficulty')}</label>
                             <select name="difficulty" value={formData.difficulty} onChange={handleChange}
                                 className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border dark:bg-gray-700 dark:border-gray-600 dark:text-white">
                                 <option value="Beginner">Beginner</option>
@@ -706,30 +779,38 @@ const CaseEditor = ({ caseId, onCancel, onSuccess }) => {
                                 <option value="Advanced">Advanced</option>
                             </select>
                         </div>
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">{t('instructor.form.caseType')}</label>
+                            <select name="type" value={formData.type || 'library'} onChange={handleChange}
+                                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                                <option value="library">{t('instructor.manageLibrary')}</option>
+                                <option value="training">{t('instructor.manageTraining')}</option>
+                            </select>
+                        </div>
 
                         <div className="col-span-2">
                             <label className="flex items-center justify-between text-sm font-medium text-gray-700 dark:text-gray-300">
-                                <span>Historia Clínica</span>
+                                <span>{t('instructor.form.history')}</span>
                                 <button
                                     type="button"
                                     onClick={() => handleAutoTranslate('history', 'history_en')}
                                     disabled={translatingFields.history_en || !formData.history}
                                     className="inline-flex items-center text-[10px] text-indigo-600 hover:text-indigo-500 font-bold uppercase tracking-wider"
-                                    title="Traducir automáticamente desde el español"
+                                    title={t('instructor.form.autoTranslateTooltip')}
                                 >
                                     {translatingFields.history_en ? (
                                         <Loader2 className="w-3 h-3 mr-1 animate-spin" />
                                     ) : (
                                         <Languages className="w-3 h-3 mr-1" />
                                     )}
-                                    Auto-traducir
+                                    {t('instructor.form.autoTranslate')}
                                 </button>
                             </label>
                             <textarea name="history" rows={2} value={formData.history} onChange={handleChange} required
                                 className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border dark:bg-gray-700 dark:border-gray-600 dark:text-white" />
                         </div>
                         <div className="col-span-2">
-                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">History (English)</label>
+                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">{t('instructor.form.historyEn')}</label>
                             <textarea name="history_en" rows={2} value={formData.history_en} onChange={handleChange}
                                 className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border dark:bg-gray-700 dark:border-gray-600 dark:text-white" />
                         </div>
@@ -740,17 +821,17 @@ const CaseEditor = ({ caseId, onCancel, onSuccess }) => {
                         <div className="flex justify-between items-center mb-4">
                             <h3 className="text-lg font-medium text-gray-900 dark:text-white flex items-center">
                                 <Layers className="w-5 h-5 mr-2 text-indigo-500" />
-                                Gestor de Imágenes y Series
+                                {t('instructor.form.imageManager')}
                             </h3>
                             <div className="flex space-x-2">
                                 <label className="cursor-pointer inline-flex items-center px-3 py-1.5 border border-gray-300 shadow-sm text-xs font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
                                     <ImageIcon className="w-4 h-4 mr-1.5" />
-                                    + Imagen
+                                    + {t('instructor.form.img')}
                                     <input type="file" className="hidden" accept="image/*" multiple onChange={(e) => handleImageUpload(e)} disabled={isSubmitting} />
                                 </label>
                                 <button type="button" onClick={addStack} className="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700">
                                     <Plus className="w-4 h-4 mr-1.5" />
-                                    + Serie
+                                    + {t('anatomy.viewer.series')}
                                 </button>
                             </div>
                         </div>
@@ -758,7 +839,7 @@ const CaseEditor = ({ caseId, onCancel, onSuccess }) => {
                         {/* Loose Images */}
                         {formData.images.length > 0 && (
                             <div className="mb-6">
-                                <h4 className="text-sm font-medium text-gray-500 uppercase tracking-wider mb-2">Imágenes Individuales</h4>
+                                <h4 className="text-sm font-medium text-gray-500 uppercase tracking-wider mb-2">{t('instructor.form.individualImages', 'Imágenes Individuales')}</h4>
                                 <div className="flex overflow-x-auto gap-4 pb-2">
                                     {formData.images.map((img, idx) => (
                                         <div key={idx} className="relative flex-shrink-0 w-32 h-32 group">
@@ -792,22 +873,24 @@ const CaseEditor = ({ caseId, onCancel, onSuccess }) => {
 
                     {/* --- TOGGLES & COMMENTS --- */}
                     <div className="grid grid-cols-1 gap-6">
-                        <div className="flex items-center justify-between bg-indigo-50 dark:bg-indigo-900/30 p-4 rounded-lg">
-                            <div>
-                                <h4 className="text-sm font-medium text-gray-900 dark:text-white">Quiz IA Exclusivo</h4>
-                                <p className="text-xs text-gray-500 dark:text-gray-400">Oculta las preguntas manuales en el visualizador.</p>
+                        {formData.type !== 'training' && (
+                            <div className="flex items-center justify-between bg-indigo-50 dark:bg-indigo-900/30 p-4 rounded-lg">
+                                <div>
+                                    <h4 className="text-sm font-medium text-gray-900 dark:text-white">{t('instructor.form.aiQuizExclusive')}</h4>
+                                    <p className="text-xs text-gray-500 dark:text-gray-400">{t('instructor.form.hideManualQuestions')}</p>
+                                </div>
+                                <label className="relative inline-flex items-center cursor-pointer">
+                                    <input type="checkbox" name="hideManualQuestions" checked={formData.hideManualQuestions} onChange={handleChange} className="sr-only peer" />
+                                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-indigo-300 dark:peer-focus:ring-indigo-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-indigo-600"></div>
+                                </label>
                             </div>
-                            <label className="relative inline-flex items-center cursor-pointer">
-                                <input type="checkbox" name="hideManualQuestions" checked={formData.hideManualQuestions} onChange={handleChange} className="sr-only peer" />
-                                <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-indigo-300 dark:peer-focus:ring-indigo-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-indigo-600"></div>
-                            </label>
-                        </div>
+                        )}
 
-                        <div>
+                        {formData.type !== 'training' && (
                             <div>
                                 <div className="flex items-center justify-between mb-2">
                                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                                        Discusión del Caso (Enriquece la explicación)
+                                        {t('instructor.form.discussion')}
                                     </label>
                                     <div className="flex space-x-2 bg-gray-100 dark:bg-gray-700 rounded-lg p-1">
                                         <button
@@ -818,7 +901,7 @@ const CaseEditor = ({ caseId, onCancel, onSuccess }) => {
                                                 : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
                                                 }`}
                                         >
-                                            Español
+                                            {t('profile.spanish')}
                                         </button>
                                         <button
                                             type="button"
@@ -828,7 +911,7 @@ const CaseEditor = ({ caseId, onCancel, onSuccess }) => {
                                                 : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
                                                 }`}
                                         >
-                                            English
+                                            {t('profile.english')}
                                         </button>
                                     </div>
                                 </div>
@@ -859,12 +942,12 @@ const CaseEditor = ({ caseId, onCancel, onSuccess }) => {
                                                         {isTranslating ? (
                                                             <>
                                                                 <RotateCw className="w-4 h-4 mr-2 animate-spin" />
-                                                                Traduciendo...
+                                                                {t('instructor.form.translating')}
                                                             </>
                                                         ) : (
                                                             <>
                                                                 <Sparkles className="w-4 h-4 mr-2 text-yellow-300" />
-                                                                Traducir Automáticamente con IA
+                                                                {t('instructor.form.translateWithAi')}
                                                             </>
                                                         )}
                                                     </button>
@@ -877,7 +960,7 @@ const CaseEditor = ({ caseId, onCancel, onSuccess }) => {
                                                     onClick={handleTranslateContent}
                                                     disabled={isTranslating}
                                                     className="absolute top-2 right-2 p-1.5 bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-300 rounded-full hover:bg-indigo-200 dark:hover:bg-indigo-900 border border-indigo-200 dark:border-indigo-700 z-10"
-                                                    title="Regenerar traducción"
+                                                    title={t('instructor.form.retranslate')}
                                                 >
                                                     <Sparkles className="w-3 h-3" />
                                                 </button>
@@ -888,68 +971,72 @@ const CaseEditor = ({ caseId, onCancel, onSuccess }) => {
 
                                 <p className="mt-1 text-xs text-gray-500">
                                     {discussionTab === 'es'
-                                        ? "Utiliza este editor para explicar el caso, agregar perlas clínicas, imágenes explicativas y dar formato al texto en Español."
-                                        : "English version of the case discussion. You can translate automatically from Spanish or edit manually."}
+                                        ? t('instructor.form.discussionHintEs')
+                                        : t('instructor.form.discussionHintEn')}
                                 </p>
                             </div>
-                        </div>
+                        )}
 
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                                Material Complementario (Archivos adjuntos)
-                            </label>
-                            <FileAttachment
-                                attachments={formData.attachments}
-                                onAdd={handleAttachmentUpload}
-                                onDelete={handleRemoveAttachment}
-                            />
-                        </div>
+                        {formData.type !== 'training' && (
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                    {t('reportEditor.supplementalMaterial')}
+                                </label>
+                                <FileAttachment
+                                    attachments={formData.attachments}
+                                    onAdd={handleAttachmentUpload}
+                                    onDelete={handleRemoveAttachment}
+                                />
+                            </div>
+                        )}
                     </div>
 
                     {/* --- MANUAL QUESTIONS --- */}
-                    <div className="border-t pt-6">
-                        <div className="flex justify-between items-center mb-4">
-                            <h3 className="text-lg font-medium text-gray-900 dark:text-white">Preguntas Manuales</h3>
-                            <button type="button" onClick={handleAddQuestion} className="text-indigo-600 hover:text-indigo-500 text-sm font-medium">
-                                + Añadir Pregunta
-                            </button>
-                        </div>
+                    {formData.type !== 'training' && (
+                        <div className="border-t pt-6">
+                            <div className="flex justify-between items-center mb-4">
+                                <h3 className="text-lg font-medium text-gray-900 dark:text-white">{t('instructor.form.manualQuestions')}</h3>
+                                <button type="button" onClick={handleAddQuestion} className="text-indigo-600 hover:text-indigo-500 text-sm font-medium">
+                                    + {t('instructor.form.addQuestion')}
+                                </button>
+                            </div>
 
-                        <div className="space-y-6">
-                            {formData.questions.map((q, i) => (
-                                <div key={i} className="bg-gray-50 dark:bg-gray-700/50 p-4 rounded-lg border border-gray-200 dark:border-gray-700 relative">
-                                    <button type="button" onClick={() => handleRemoveQuestion(i)} className="absolute top-2 right-2 text-gray-400 hover:text-red-500">
-                                        <X size={16} />
-                                    </button>
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                        <div>
-                                            <label className="block text-xs font-semibold uppercase text-gray-500 mb-1">Español</label>
-                                            <input type="text" value={q.text} onChange={(e) => handleQuestionChange(i, 'text', e.target.value)} placeholder="Pregunta..."
-                                                className="block w-full rounded-md border-gray-300 shadow-sm text-sm p-2 border mb-2" />
-                                            {q.options.map((opt, oid) => (
-                                                <div key={oid} className="flex items-center space-x-2 mb-1">
-                                                    <input type="radio" checked={parseInt(q.correctAnswer) === oid} onChange={() => handleQuestionChange(i, 'correctAnswer', oid)} />
-                                                    <input type="text" value={opt} onChange={(e) => handleOptionChange(i, oid, e.target.value)} placeholder={`Opción ${oid + 1}`}
-                                                        className="block w-full text-xs border-gray-300 rounded p-1" />
-                                                </div>
-                                            ))}
-                                        </div>
-                                        <div>
-                                            <label className="block text-xs font-semibold uppercase text-gray-500 mb-1">English (Translation)</label>
-                                            <input type="text" value={formData.questions_en?.[i]?.text || ''} onChange={(e) => handleQuestionChange(i, 'text', e.target.value, 'en')} placeholder="Question..."
-                                                className="block w-full rounded-md border-gray-300 shadow-sm text-sm p-2 border mb-2" />
-                                            {(formData.questions_en?.[i]?.options || ['', '', '', '']).map((opt, oid) => (
-                                                <div key={oid} className="flex items-center space-x-2 mb-1 pl-5">
-                                                    <input type="text" value={opt} onChange={(e) => handleOptionChange(i, oid, e.target.value, 'en')} placeholder={`Option ${oid + 1}`}
-                                                        className="block w-full text-xs border-gray-300 rounded p-1" />
-                                                </div>
-                                            ))}
+                            <div className="space-y-6">
+                                {formData.questions.map((q, i) => (
+                                    <div key={i} className="bg-gray-50 dark:bg-gray-700/50 p-4 rounded-lg border border-gray-200 dark:border-gray-700 relative">
+                                        <button type="button" onClick={() => handleRemoveQuestion(i)} className="absolute top-2 right-2 text-gray-400 hover:text-red-500">
+                                            <X size={16} />
+                                        </button>
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                            <div>
+                                                <label className="block text-xs font-semibold uppercase text-gray-500 mb-1">{t('profile.spanish')}</label>
+                                                <input type="text" value={q.text} onChange={(e) => handleQuestionChange(i, 'text', e.target.value)} placeholder={t('aiQuiz.game.progress', { current: '', total: '' }).split(' ')[0] + '...'}
+                                                    className="block w-full rounded-md border-gray-300 shadow-sm text-sm p-2 border mb-2" />
+                                                {q.options.map((opt, oid) => (
+                                                    <div key={oid} className="flex items-center space-x-2 mb-1">
+                                                        <input type="radio" checked={parseInt(q.correctAnswer) === oid} onChange={() => handleQuestionChange(i, 'correctAnswer', oid)} />
+                                                        <input type="text" value={opt} onChange={(e) => handleOptionChange(i, oid, e.target.value)} placeholder={`${t('instructor.form.option', 'Opción')} ${oid + 1}`}
+                                                            className="block w-full text-xs border-gray-300 rounded p-1" />
+                                                    </div>
+                                                ))}
+                                            </div>
+                                            <div>
+                                                <label className="block text-xs font-semibold uppercase text-gray-500 mb-1">{t('profile.english')}</label>
+                                                <input type="text" value={formData.questions_en?.[i]?.text || ''} onChange={(e) => handleQuestionChange(i, 'text', e.target.value, 'en')} placeholder={t('aiQuiz.game.progress', { current: '', total: '' }).split(' ')[0] + '...'}
+                                                    className="block w-full rounded-md border-gray-300 shadow-sm text-sm p-2 border mb-2" />
+                                                {(formData.questions_en?.[i]?.options || ['', '', '', '']).map((opt, oid) => (
+                                                    <div key={oid} className="flex items-center space-x-2 mb-1 pl-5">
+                                                        <input type="text" value={opt} onChange={(e) => handleOptionChange(i, oid, e.target.value, 'en')} placeholder={`${t('instructor.form.optionEn', 'Option')} ${oid + 1}`}
+                                                            className="block w-full text-xs border-gray-300 rounded p-1" />
+                                                    </div>
+                                                ))}
+                                            </div>
                                         </div>
                                     </div>
-                                </div>
-                            ))}
+                                ))}
+                            </div>
                         </div>
-                    </div>
+                    )}
 
                 </form>
             </div>
@@ -960,7 +1047,7 @@ const CaseEditor = ({ caseId, onCancel, onSuccess }) => {
                     onClick={onCancel}
                     className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
                 >
-                    Cancelar
+                    {t('common.cancel')}
                 </button>
                 <button
                     onClick={handleSubmit}
@@ -968,7 +1055,7 @@ const CaseEditor = ({ caseId, onCancel, onSuccess }) => {
                     className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50"
                 >
                     <Save className="mr-2 h-4 w-4" />
-                    Guardar Cambios
+                    {t('common.save')}
                 </button>
             </div>
         </div>

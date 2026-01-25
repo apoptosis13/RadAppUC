@@ -13,6 +13,10 @@ import ManageAnatomyPage from './features/instructor/pages/anatomy/ManageAnatomy
 import EditAnatomyPage from './features/instructor/pages/anatomy/EditAnatomyPage';
 import InstructorDashboard from './features/instructor/pages/InstructorDashboard';
 import AnalyticsDashboard from './features/instructor/pages/AnalyticsDashboard';
+import ManageMaterialsPage from './features/instructor/pages/ManageMaterialsPage';
+import ReportTrainingDashboard from './features/report-training/pages/ReportTrainingDashboard';
+import ReportWorkspace from './features/report-training/pages/ReportWorkspace';
+import SupportMaterialPage from './features/support-material/pages/SupportMaterialPage';
 
 import LoginPage from './pages/LoginPage';
 import ProfilePage from './pages/ProfilePage';
@@ -43,6 +47,11 @@ function App() {
               <Route path="cases" element={<CaseList />} />
               <Route path="cases/:caseId" element={<CaseDetail />} />
 
+              <Route path="report-training" element={<ReportTrainingDashboard />} />
+              <Route path="report-training/:caseId" element={<ReportWorkspace />} />
+
+              <Route path="support-material" element={<SupportMaterialPage />} />
+
               <Route path="profile" element={<ProfilePage />} />
               <Route path="about" element={<AboutPage />} />
             </Route>
@@ -59,6 +68,7 @@ function App() {
               <Route path="anatomy/create" element={<EditAnatomyPage />} />
               <Route path="anatomy/edit/:moduleId" element={<EditAnatomyPage />} />
               <Route path="analytics" element={<AnalyticsDashboard />} />
+              <Route path="materials" element={<ManageMaterialsPage />} />
             </Route>
 
             {/* Fallback route */}

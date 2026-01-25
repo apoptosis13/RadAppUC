@@ -4,6 +4,7 @@ import { anatomyService } from '../services/anatomyService';
 import { Image as ImageIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { getLocalizedModuleField } from '../utils/anatomyTranslations';
+import PageHeader from '../components/PageHeader';
 
 const REGION_IDS = ['upper-limb', 'lower-limb'];
 
@@ -102,14 +103,10 @@ const AnatomyPage = () => {
 
     return (
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-            <div className="text-center mb-12">
-                <h1 className="text-3xl font-extrabold text-gray-900 dark:text-white sm:text-4xl">
-                    {t('anatomy.landing.title')}
-                </h1>
-                <p className="mt-3 max-w-2xl mx-auto text-xl text-gray-500 dark:text-gray-400 sm:mt-4">
-                    {t('anatomy.landing.description')}
-                </p>
-            </div>
+            <PageHeader
+                title={t('anatomy.landing.title')}
+                subtitle={t('anatomy.landing.description')}
+            />
 
             <div className="space-y-16">
                 {regions.map((region) => (

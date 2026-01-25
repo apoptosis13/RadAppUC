@@ -11,6 +11,7 @@ import { anatomyService } from '../../../services/anatomyService';
 import { statsService } from '../../../services/statsService';
 import { useAuth } from '../../../context/AuthContext';
 import { Shield, TrendingUp, Users, Activity, X, BookOpen, Map as MapIcon, Clock, AlertCircle, Trophy, Eye, ChevronRight } from 'lucide-react';
+import PageHeader from '../../../components/PageHeader';
 
 const COLORS = [
     '#6366f1', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6',
@@ -296,49 +297,47 @@ const AnalyticsDashboard = () => {
 
     return (
         <div className="p-6 space-y-6 max-w-7xl mx-auto">
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                <h1 className="text-2xl font-bold text-gray-900 flex items-center">
-                    <Activity className="w-8 h-8 mr-2 text-indigo-600" />
-                    Panel de Inteligencia Educativa
-                </h1>
-
-                {/* Tabs & Controls */}
-                <div className="flex flex-wrap items-center gap-2">
-                    <button
-                        onClick={loadData}
-                        className="p-2 text-gray-500 hover:text-indigo-600 hover:bg-gray-100 rounded-lg transition-colors mr-2"
-                        title="Actualizar Datos"
-                    >
-                        <TrendingUp className={`w-5 h-5 ${loading ? 'animate-spin' : ''}`} />
-                    </button>
-                    <div className="flex bg-gray-100 p-1 rounded-lg">
+            <PageHeader
+                title="Panel de Inteligencia Educativa"
+                icon={Activity}
+                actions={
+                    <div className="flex flex-wrap items-center gap-2">
                         <button
-                            onClick={() => setActiveTab('overview')}
-                            className={`px-4 py-2 text-sm font-medium rounded-md transition-all ${activeTab === 'overview' ? 'bg-white shadow-sm text-indigo-600' : 'text-gray-500 hover:text-gray-700'}`}
+                            onClick={loadData}
+                            className="p-2 text-gray-500 hover:text-indigo-600 hover:bg-gray-100 rounded-lg transition-colors mr-2"
+                            title="Actualizar Datos"
                         >
-                            Visión General
+                            <TrendingUp className={`w-5 h-5 ${loading ? 'animate-spin' : ''}`} />
                         </button>
-                        <button
-                            onClick={() => setActiveTab('content')}
-                            className={`px-4 py-2 text-sm font-medium rounded-md transition-all ${activeTab === 'content' ? 'bg-white shadow-sm text-indigo-600' : 'text-gray-500 hover:text-gray-700'}`}
-                        >
-                            Popularidad y Contenido
-                        </button>
-                        <button
-                            onClick={() => setActiveTab('users')}
-                            className={`px-4 py-2 text-sm font-medium rounded-md transition-all ${activeTab === 'users' ? 'bg-white shadow-sm text-indigo-600' : 'text-gray-500 hover:text-gray-700'}`}
-                        >
-                            Estadísticas de Usuarios
-                        </button>
-                        <button
-                            onClick={() => setActiveTab('quizzes')}
-                            className={`px-4 py-2 text-sm font-medium rounded-md transition-all ${activeTab === 'quizzes' ? 'bg-white shadow-sm text-indigo-600' : 'text-gray-500 hover:text-gray-700'}`}
-                        >
-                            Evaluaciones
-                        </button>
+                        <div className="flex bg-gray-100 dark:bg-gray-800 p-1 rounded-lg border border-gray-200 dark:border-gray-700 overflow-x-auto">
+                            <button
+                                onClick={() => setActiveTab('overview')}
+                                className={`px-4 py-1.5 text-xs font-bold rounded-md transition-all whitespace-nowrap ${activeTab === 'overview' ? 'bg-white dark:bg-gray-700 shadow-sm text-indigo-600 dark:text-indigo-400' : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'}`}
+                            >
+                                Visión General
+                            </button>
+                            <button
+                                onClick={() => setActiveTab('content')}
+                                className={`px-4 py-1.5 text-xs font-bold rounded-md transition-all whitespace-nowrap ${activeTab === 'content' ? 'bg-white dark:bg-gray-700 shadow-sm text-indigo-600 dark:text-indigo-400' : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'}`}
+                            >
+                                Contenido
+                            </button>
+                            <button
+                                onClick={() => setActiveTab('users')}
+                                className={`px-4 py-1.5 text-xs font-bold rounded-md transition-all whitespace-nowrap ${activeTab === 'users' ? 'bg-white dark:bg-gray-700 shadow-sm text-indigo-600 dark:text-indigo-400' : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'}`}
+                            >
+                                Usuarios
+                            </button>
+                            <button
+                                onClick={() => setActiveTab('quizzes')}
+                                className={`px-4 py-1.5 text-xs font-bold rounded-md transition-all whitespace-nowrap ${activeTab === 'quizzes' ? 'bg-white dark:bg-gray-700 shadow-sm text-indigo-600 dark:text-indigo-400' : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'}`}
+                            >
+                                Evaluaciones
+                            </button>
+                        </div>
                     </div>
-                </div>
-            </div>
+                }
+            />
 
             {errorMsg && (
                 <div className="bg-amber-50 border-l-4 border-amber-400 p-4 rounded-r-lg flex items-start">

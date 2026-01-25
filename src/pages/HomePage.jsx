@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { Bone, Images, Shield, ArrowRight } from 'lucide-react';
+import { Bone, Images, Shield, ArrowRight, Sparkles, Library } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import Button from '../components/Button';
 import { useAuth } from '../context/AuthContext';
@@ -64,6 +64,28 @@ const HomePage = () => {
                             border: 'border-emerald-500/20',
                             hover: 'hover:border-emerald-500/50',
                             linkLabel: t('home.features.cases.link')
+                        },
+                        {
+                            title: t('home.features.training.title'),
+                            description: t('home.features.training.description'),
+                            icon: Sparkles,
+                            href: '/report-training',
+                            color: 'text-amber-400',
+                            bg: 'bg-amber-500/10',
+                            border: 'border-amber-500/20',
+                            hover: 'hover:border-amber-500/50',
+                            linkLabel: t('home.features.training.link')
+                        },
+                        {
+                            title: t('home.features.support.title'),
+                            description: t('home.features.support.description'),
+                            icon: Library,
+                            href: '/support-material',
+                            color: 'text-cyan-400',
+                            bg: 'bg-cyan-500/10',
+                            border: 'border-cyan-500/20',
+                            hover: 'hover:border-cyan-500/50',
+                            linkLabel: t('home.features.support.link')
                         },
                         ...(user && user.role === 'admin' ? [{
                             title: t('home.features.instructor.title'),

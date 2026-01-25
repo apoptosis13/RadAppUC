@@ -3,13 +3,17 @@
         "home": "Home",
         "anatomy": "Anatomy",
         "cases": "Cases",
+        "training": "Training",
+        "supportMaterial": "Teaching Material",
+        "reportTraining": "Report Training",
         "instructor": "Instructor Portal",
         "profile": "My Profile"
     },
     "common": {
         "save": "Save",
         "cancel": "Cancel",
-        "confirm": "Confirm"
+        "confirm": "Confirm",
+        "untitled": "Untitled"
     },
     "home": {
         "title": "VoxelHub",
@@ -27,6 +31,16 @@
                 "title": "Case Library",
                 "description": "Case studies and diagnostic challenges of varying difficulty.",
                 "link": "Browse Cases"
+            },
+            "training": {
+                "title": "Report Training",
+                "description": "Practice radiology report dictation with AI assistance on training cases.",
+                "link": "Start Training"
+            },
+            "support": {
+                "title": "Support Material",
+                "description": "Videos, presentations, and articles to support your MSK radiology training.",
+                "link": "View Material"
             },
             "instructor": {
                 "title": "Instructor Portal",
@@ -85,7 +99,7 @@
             "descriptionTitle": "DESCRIPTION",
             "tools": {
                 "rotate": "Rotate",
-                "flip": "Flip",
+                "flipH": "Flip Horizontal",
                 "zoomIn": "Zoom In",
                 "zoomOut": "Zoom Out",
                 "fullscreen": "Fullscreen",
@@ -94,9 +108,9 @@
                 "adjust": "Adjust Image",
                 "brightness": "Brightness",
                 "contrast": "Contrast",
-                "rotate": "Rotate",
-                "flipH": "Flip",
-                "reset": "Reset"
+                "reset": "Reset",
+                "series": "Series",
+                "img": "Img"
             }
         },
         "categories": {
@@ -159,7 +173,7 @@
             "case2": {
                 "title": "Persistent Cough",
                 "history": "45-year-old female with 3 weeks of productive cough and fever.",
-                "correctDiagnosis": "Right Lower Lobe Pneumonia"
+                "correctDiagnosis": "Right Lower Lobe Phonemonia"
             },
             "case3": {
                 "title": "Severe Headache",
@@ -203,22 +217,69 @@
         "dashboard": "Dashboard",
         "createCase": "Create New Case",
         "manageCases": "Manage Cases",
+        "manageLibrary": "Manage Library",
+        "manageLibraryDesc": "Manage cases in the general study library.",
+        "manageTraining": "Manage Training",
+        "manageTrainingDesc": "Manage specific cases for report practice.",
+        "manageAnatomy": "Anatomy Management",
+        "manageAnatomyDesc": "Manage anatomy modules and annotations.",
+        "access": "Access",
         "form": {
             "title": "Case Title",
+            "titleEn": "Title (English)",
             "modality": "Modality",
             "difficulty": "Difficulty",
+            "caseType": "Case Type",
             "history": "Clinical History",
+            "historyEn": "History (English)",
             "imageUrl": "Case Image",
             "uploadImage": "Upload a file",
             "orDrag": "or drag and drop",
             "orEnterUrl": "Or enter Image URL",
             "removeImage": "Remove image",
             "correctDiagnosis": "Correct Diagnosis",
+            "correctDiagnosisEn": "Diagnosis (English)",
             "submit": "Save Case",
-            "success": "Case created successfully"
+            "success": "Case saved successfully",
+            "editCase": "Edit Case",
+            "newCase": "New Case",
+            "seriesName": "Series Name (e.g. Axial T2)",
+            "invertOrder": "Invert Image Order",
+            "dragDrop": "Drag images or use '+ Add images'",
+            "addImages": "Add Images",
+            "addMoreImages": "Add more images at the end",
+            "removeImageTooltip": "Delete this image",
+            "autoTranslate": "Auto-translate",
+            "autoTranslateTooltip": "Translate automatically from Spanish",
+            "aliases": "Alternative Diagnoses (Accepted synonyms)",
+            "aliasesPlaceholder": "Add accepted variant (e.g. 'Meniscal tear')",
+            "aliasesHint": "Add variants in Spanish or English that should also be considered correct.",
+            "manualQuestions": "Manual Questions",
+            "addQuestion": "Add Question",
+            "imageManager": "Image and Series Manager",
+            "remove": "Remove",
+            "img": "Image",
+            "option": "Option",
+            "optionEn": "Option (English)",
+            "checklistDesc": "Define key phrases or findings that the student must include in their report.",
+            "add": "Add",
+            "loading": "Loading case...",
+            "translating": "Translating...",
+            "translationSuccess": "Translation completed. Please review the content.",
+            "translationError": "No Spanish text to translate.",
+            "deleteStackConfirm": "Delete this series and its images?",
+            "invertStackConfirm": "Invert the order of images in this series?",
+            "aiQuizExclusive": "Exclusive AI Quiz",
+            "hideManualQuestions": "Hide manual questions in viewer.",
+            "discussion": "Case Discussion (Enrich explanation)",
+            "discussionHintEs": "Use this editor to explain the case, add clinical pearls, explanatory images, and format text in Spanish.",
+            "discussionHintEn": "English version of the case discussion. You can translate automatically from Spanish or edit manually.",
+            "translateWithAi": "Auto-Translate with AI",
+            "retranslate": "Regenerate translation"
         },
         "users": {
             "title": "User Management",
+            "desc": "Manage users and platform permissions.",
             "addUser": "Add User",
             "editUser": "Edit User",
             "deleteConfirm": "Are you sure you want to delete this user?",
@@ -242,6 +303,47 @@
                 "role": "Role",
                 "save": "Save User",
                 "cancel": "Cancel"
+            }
+        },
+        "materials": {
+            "title": "Teaching Material Management",
+            "subtitle": "Upload, edit and organize pedagogical resources on the platform.",
+            "newMaterial": "New Material",
+            "editMaterial": "Edit Material",
+            "form": {
+                "title": "Title (Spanish)",
+                "titleEn": "Title (English)",
+                "titlePlaceholder": "Enter resource title...",
+                "description": "Description (Spanish)",
+                "descriptionEn": "Description (English)",
+                "descriptionPlaceholder": "Enter resource description...",
+                "category": "Category",
+                "type": "Resource Type",
+                "url": "Resource URL",
+                "urlPlaceholder": "https://...",
+                "provider": "Provider",
+                "thumbnail": "Thumbnail URL (Optional)",
+                "bunnyTip": "For Bunny.net use the 'Embed' link (iframe src)",
+                "save": "Save Changes",
+                "create": "Create Material"
+            },
+            "list": {
+                "title": "Materials List",
+                "searchPlaceholder": "Search material...",
+                "table": {
+                    "resource": "Resource",
+                    "type": "Type",
+                    "category": "Category",
+                    "actions": "Actions"
+                },
+                "empty": "No registered materials found."
+            },
+            "alerts": {
+                "deleteConfirm": "Are you sure you want to delete this material?",
+                "deleteError": "Error deleting material",
+                "saveSuccess": "Material updated",
+                "createSuccess": "Material created",
+                "saveError": "Error saving material"
             }
         }
     },
@@ -358,5 +460,110 @@
             "success": "Thank you! Your report has been submitted.",
             "error": "Error submitting report."
         }
+    },
+    "supportMaterial": {
+        "title": "Radiological Support Material",
+        "subtitle": "Teaching archive with videos, presentations, and clinical guides for your training.",
+        "searchPlaceholder": "Search by title, topic or keyword...",
+        "noResults": {
+            "title": "No materials found",
+            "desc": "Try other search terms or select another category."
+        },
+        "modalities": {
+            "all": "All Modalities",
+            "rx": "X-Ray / General",
+            "us": "Ultrasound",
+            "mri": "MRI",
+            "ct": "CT Scan",
+            "other": "Others"
+        },
+        "types": {
+            "all": "All Types",
+            "video": "Videos",
+            "presentation": "Presentations",
+            "article": "Articles"
+        },
+        "card": {
+            "view": "View Material",
+            "description": "Description"
+        }
+    },
+    "training": {
+        "dashboard": {
+            "title": "Report Training",
+            "subtitle": "Select a clinical case and practice your dictation and radiology report generation.",
+            "searchPlaceholder": "Search cases by title or diagnosis...",
+            "noCases": "No cases found.",
+            "startPractice": "START PRACTICE",
+            "noDescription": "No description available."
+        },
+        "workspace": {
+            "loading": "Loading case...",
+            "caseNotFound": "Case not found",
+            "hideReport": "Hide Report",
+            "showReport": "Show Report",
+            "trainingMode": "Training Mode",
+            "history": "History",
+            "vocabulary": "Vocabulary",
+            "checklist": "Checklist",
+            "editor": "Editor",
+            "savedReports": "Saved Reports",
+            "saving": "Saving...",
+            "saveBtn": "Save",
+            "saveSuccess": "Report saved successfully.",
+            "saveError": "Error saving report.",
+            "aiError": "Error processing with AI. Original text will be used."
+        }
+    },
+    "dictation": {
+        "title": "Dictation Mode",
+        "placeholder": "Press RECORD to start or type here...",
+        "listening": "Listening...",
+        "micConnected": "SpeechMike Connected",
+        "connectMic": "Connect Philips SpeechMike",
+        "resetHint": "Reset dictation",
+        "resetConfirm": "Clear entire dictation?",
+        "notSupported": "Dictation Mode is not supported in this browser. Please use Chrome or Edge.",
+        "heard": "Heard:",
+        "buttons": {
+            "start": "START RECORDING",
+            "stop": "PAUSE / STOP",
+            "pause": "PAUSE",
+            "resume": "RESUME",
+            "finalizeSession": "FINALIZE SESSION",
+            "generateReport": "GENERATE FINAL REPORT",
+            "polishing": "POLISHING REPORT (AI)..."
+        }
+    },
+    "reportEditor": {
+        "exam": "Exam / Title",
+        "findings": "Findings",
+        "impression": "Impression / Conclusion",
+        "placeholder": "e.g., TOTAL SPINE MRI",
+        "supplementalMaterial": "Supplementary Material",
+        "fontSize": {
+            "title": "Text Size",
+            "increase": "Increase size",
+            "decrease": "Decrease size"
+        }
+    },
+    "vocabulary": {
+        "title": "Vocabulary Manager",
+        "titleVoice": "Voice Training",
+        "desc": "Train AI with specific medical terms.",
+        "descVoice": "Teach AI your specific speech patterns.",
+        "personal": "My Vocabulary",
+        "voice": "Natural Voice",
+        "global": "Global",
+        "voiceInputLabel": "When the system hears:",
+        "voiceOutputLabel": "I actually meant:",
+        "saveVoice": "Save Voice Example",
+        "addBtn": "Add",
+        "globalLock": "Global vocabulary is managed by instructors.",
+        "loading": "Loading...",
+        "emptyVoice": "No custom voice examples.",
+        "emptyVoiceHint": "Add examples above so AI understands your accent.",
+        "emptyList": "Empty list.",
+        "emptyListHint": "You can paste a list of words."
     }
 }

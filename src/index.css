@@ -17,6 +17,11 @@
   -moz-osx-font-smoothing: grayscale;
 }
 
+em,
+i {
+  font-style: italic;
+}
+
 /* Default light mode overrides if not using Tailwind's base reset fully or for specific root vars */
 :root.dark {
   color-scheme: dark;
